@@ -1,0 +1,23 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# IDE and editor files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+tmp/
+*.tmp
+*.bak
+
+# Debug files
+*.pdb
+
+# Keep releases directory - we want binaries in GitHub
+# /releases/ is NOT ignored

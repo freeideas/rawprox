@@ -21,3 +21,6 @@ tmp/
 
 # Keep releases directory - we want binaries in GitHub
 # /releases/ is NOT ignored
+
+# Project-specific files
+CLAUDE.md

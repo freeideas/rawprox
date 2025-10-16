@@ -1,67 +1,74 @@
 # RawProx - Raw Traffic Logging Proxy
 
-A simple TCP proxy that logs every byte of traffic in both directions as JSON.
+A transparent TCP proxy that logs every byte of network traffic as it passes through. Outputs streaming NDJSON (Newline-Delimited JSON) for easy parsing and analysis.
 
-## Building
+> **Related Documentation**: See [FOUNDATION.md](FOUNDATION.md) for project goals and philosophy. See [SPECIFICATION.md](SPECIFICATION.md) for the complete technical specification.
+
+## Quick Start
 
 ```bash
+# Build
 cargo build --release
+
+# Run: Listen on port 8080, forward to example.com:80
+./target/release/rawprox 8080:example.com:80
+
+# In another terminal, send traffic through the proxy
+curl http://localhost:8080
 ```
 
-The executable will be created at `target/release/rawprox`.
+**Note**: If you get an error like "Port 8080 is already in use", another process is listening on that port. Choose a different port or stop the conflicting process.
 
 ## Usage
 
 ```bash
-rawprox 8080 example.com 8081
+rawprox [ARGS ...]
 ```
 
-### Parameters (all are required)
+**Arguments**:
+- **Port forwarding rules** (required, at least one): `LOCAL_PORT:TARGET_HOST:TARGET_PORT`
+  - `LOCAL_PORT` - Port to listen on for incoming connections
+  - `TARGET_HOST` - Destination hostname or IP to forward traffic to
+  - `TARGET_PORT` - Destination port to forward traffic to
+- **Output file** (optional): `@FILEPATH` - Write output to file instead of stdout (directories created automatically)
 
-- Local port to listen on for incoming connections
-- Destination hostname or IP address to forward traffic to
-- Destination port to forward traffic to
+**Multiple ports**: You can specify multiple port forwardings to monitor several services simultaneously from one proxy instance.
 
-### Log Format
+**Examples:**
+```bash
+# Proxy local port 3306 to MySQL server
+rawprox 3306:db.example.com:3306
 
-Output is a JSON array to stdout with one entry per line. Each connection (client→proxy→target) gets a unique connection ID:
+# Intercept HTTP traffic
+rawprox 8080:api.example.com:80
 
+# Monitor Redis protocol
+rawprox 6379:localhost:6380
+
+# Monitor multiple services at once
+rawprox 8080:api.example.com:80 3306:db.example.com:3306 6379:localhost:6379
+
+# Save all traffic to a file (using @file argument)
+rawprox 9000:server.com:443 @traffic.ndjson
+
+# Can also use shell redirection if preferred
+rawprox 9000:server.com:443 > traffic.ndjson
+```
+
+## Output Format
+
+RawProx outputs NDJSON (Newline-Delimited JSON) to stdout - one JSON object per line.
+
+**Example output:**
 ```json
-[
-{"id":1,"stamp":"2025-07-22_23:45:22.123456","type":"local_open","client":"192.168.1.100:54321"},
-{"id":1,"stamp":"2025-07-22_23:45:22.234567","type":"remote_open","target":"example.com:8081"},
-{"id":1,"stamp":"2025-07-22_23:45:22.392838","direction":">","data":"GET /favicon.ico HTTP/1.1\r\nHost: example.com\r\n\r\n"},
-{"id":1,"stamp":"2025-07-22_23:45:22.425123","direction":"<","data":"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\n\r\n\u0089PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0010\u0000\u0000\u0000\u0010\u0008\u0006"},
-{"id":2,"stamp":"2025-07-22_23:45:22.789012","type":"local_open","client":"192.168.1.101:54322"},
-{"id":2,"stamp":"2025-07-22_23:45:22.890123","type":"remote_open","target":"example.com:8081"},
-{"id":1,"stamp":"2025-07-22_23:45:23.567890","type":"remote_close"},
-{"id":1,"stamp":"2025-07-22_23:45:23.678901","type":"local_close"},
-{"id":2,"stamp":"2025-07-22_23:45:24.012345","type":"remote_close"},
-{"id":2,"stamp":"2025-07-22_23:45:24.123456","type":"local_close"}
-]
+{"time":"2025-10-14T15:32:47.123456Z","ConnID":"0tK3X","event":"open","from":"127.0.0.1:54321","to":"example.com:80"}
+{"time":"2025-10-14T15:32:47.234567Z","ConnID":"0tK3X","data":"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n","from":"127.0.0.1:54321","to":"example.com:80"}
+{"time":"2025-10-14T15:32:47.345678Z","ConnID":"0tK3X","data":"HTTP/1.1 200 OK\r\n\r\nHello!","from":"example.com:80","to":"127.0.0.1:54321"}
+{"time":"2025-10-14T15:32:47.456789Z","ConnID":"0tK3X","event":"close","from":"example.com:80","to":"127.0.0.1:54321"}
 ```
 
-#### Common Fields:
-- `id` - Connection ID (auto-incrementing integer, unique per client→proxy→target connection). This enables multiple simultaneous conversations to be distinguished from one another in the log output.
-- `stamp` - Timestamp in YYYY-MM-DD_HH:MM:SS.microseconds format
+Each log entry shows timestamp, connection ID, and data/event. Data is logged as transmitted (streaming), not buffered. See [SPECIFICATION.md](SPECIFICATION.md) for details.
 
-#### Connection Events:
-- `type: "local_open"` - Client connected to proxy's local port
-  - `client` - Client address and port (e.g., "192.168.1.100:54321")
-- `type: "remote_open"` - Proxy connected to target server
-  - `target` - Target host and port (e.g., "example.com:8081")
-- `type: "local_close"` - Client disconnected from proxy
-- `type: "remote_close"` - Target server closed connection
+## Use Cases
 
-#### Data Transfer Events:
-- `direction` - `<` for client-to-server, `>` for server-to-client
-- `data` - JSON-escaped string with printable ASCII kept readable, binary as \uXXXX
-
-### Features
-
-- Transparent TCP proxy - forwards all traffic unchanged
-- Complete traffic logging in both directions
-- JSON format for easy parsing and analysis
-- JSON escaping keeps text readable while handling binary data
-- 32KB buffer size so transmissions will rarely be divided into multiple console messages
-- Async I/O with Tokio for high performance and concurrent connections
+Protocol debugging, API reverse engineering, integration testing, learning network protocols. See [FOUNDATION.md](FOUNDATION.md) for details.

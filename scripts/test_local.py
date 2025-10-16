@@ -141,12 +141,15 @@ def test_stdout_vs_filespec():
     proxy = subprocess.Popen(
         [str(binary), f"{local_port}:127.0.0.1:{target_port}", f"@{filespec_file}"],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=None,  # Don't capture stderr so we can see debug output
         text=True
     )
 
     try:
         send_test_traffic(local_port, target_port)
+        # Extra wait to ensure flush happens
+        print("  Waiting extra 3 seconds for flush...")
+        time.sleep(3)
     finally:
         proxy.terminate()
         proxy.wait(timeout=2)

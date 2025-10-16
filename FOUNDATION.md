@@ -52,8 +52,9 @@ The tool should be:
 - **Fast**: Handle high-throughput connections without becoming a bottleneck
 - **Reliable**: Never crash, never modify traffic, works on network drives and local filesystems. See [doc/LESSONS_LEARNED.md](doc/LESSONS_LEARNED.md) for Windows network drive considerations.
 - **Parseable**: Output should be both human-readable and machine-processable
-- **Self-Contained**: Single executable, no dependencies, no installation
+- **Self-Contained**: Single native executable compiled with GraalVM native-image, no JVM required, no dependencies, no installation
 - **Clear Error Messages**: When things go wrong (e.g., port already in use), provide actionable error messages
+- **Modular**: Break complex code into smaller, focused modules. Isolate difficult/experimental parts from stable components to reduce risk and improve maintainability. Apply divide-and-conquer refactoring: separate simple/stable code from tricky/complex code into different files, allowing well-understood logic to stabilize while focusing iteration on challenging portions
 
 ## Success Criteria
 

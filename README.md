@@ -8,20 +8,26 @@ A transparent TCP proxy that logs every byte of network traffic as it passes thr
 
 Download pre-built binaries from [releases](https://github.com/yourusername/rawprox/releases), or build from source:
 
+**Requirements:**
+- JDK 21 or later
+- GraalVM (for native-image compilation)
+- Maven (for dependency management)
+
 ```bash
-cargo build --release
+# Build native executable with GraalVM
+mvn clean package -Pnative
 ```
 
-The executable will be at `./target/release/rawprox` (or `rawprox.exe` on Windows).
+The executable will be at `./release/rawprox.exe` (Windows) or `./release/rawprox` (Linux/macOS).
 
 ## Quick Start
 
 ```bash
-# Build
-cargo build --release
+# Build native executable
+mvn clean package -Pnative
 
 # Run: Listen on port 8080, forward to example.com:80
-./target/release/rawprox 8080:example.com:80
+./release/rawprox.exe 8080:example.com:80
 
 # In another terminal, send traffic through the proxy
 curl http://localhost:8080

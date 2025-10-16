@@ -1,13 +1,12 @@
 # RawProx Technical Specification
 
-Version: 2.0
-Last Updated: 2025-10-16
-
 > **Documentation**: [FOUNDATION.md](FOUNDATION.md) - project goals and philosophy | [README.md](README.md) - usage examples and quick start | [doc/](doc/) - implementation notes
 
 ## 1. Overview
 
 RawProx is a transparent TCP proxy that intercepts network traffic between clients and servers, forwarding all data unchanged while logging every transmitted byte as NDJSON (Newline-Delimited JSON). Output is written to stdout by default, or to a file when specified via `@FILEPATH` argument.
+
+**Implementation**: Java application compiled to native executable using GraalVM native-image. The native binary requires no JVM at runtime.
 
 ### 1.1 Design Goals
 
@@ -26,13 +25,26 @@ See [FOUNDATION.md](FOUNDATION.md) for complete design goals and philosophy.
 
 ### 2.2 Concurrency Model
 
-- Asynchronous I/O using Tokio runtime
+- Asynchronous I/O with event-based networking
 - Multiple listening sockets bound concurrently (one per port forwarding rule)
-- Each client connection spawns an independent handler task
-- Each handler spawns two subtasks:
+- Each client connection handled independently
+- Bidirectional forwarding:
   - Client→Server forwarding and logging
   - Server→Client forwarding and logging
 - Double-buffered output system prevents network threads from blocking on I/O (see §8.1)
+
+### 2.3 Code Modularization
+
+**Implementation Principle**: Break code into focused, single-purpose modules to isolate complexity and stabilize core functionality.
+
+**Divide-and-Conquer Refactoring**: When code files become troublesome or difficult to work with, split them by separating simple/stable logic from tricky/complex portions into different files. This allows well-understood code to stabilize while focusing iteration exclusively on challenging parts.
+
+**Guidelines**:
+- When encountering difficult/experimental code areas, extract them into separate modules
+- Keep stable, well-tested components isolated from volatile components
+- Each module should have a clear, single responsibility
+- Prefer multiple small files over large monolithic files
+- This reduces risk when modifying complex parts and makes testing easier
 
 ## 3. Command Line Interface
 
@@ -291,11 +303,11 @@ Output (stdout or file) uses double-buffering with minimum 2-second swap interva
 
 See [doc/DOUBLE_BUFFERING.md](doc/DOUBLE_BUFFERING.md) for complete architecture and implementation details.
 
-### 8.2 Async Runtime
+### 8.2 Concurrency Implementation
 
-- Tokio async runtime: one task per connection, two subtasks for bidirectional forwarding
-- ConnID counter: atomic u64 with SeqCst ordering
-- Per-connection state is task-local (no shared state)
+- Event-driven I/O: one handler per connection, bidirectional forwarding
+- ConnID counter: atomic counter with proper synchronization
+- Per-connection state is isolated (no shared state)
 
 ## 9. Error Handling
 

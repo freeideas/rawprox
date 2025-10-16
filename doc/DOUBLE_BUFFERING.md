@@ -1,8 +1,5 @@
 # Double Buffering Strategy for Append-Only File Writes
 
-**Date:** 2025-10-16
-**Status:** Design Pattern
-
 ## Problem Statement
 
 Applications that generate high-frequency data and need to write it to files face contradictory requirements:

@@ -48,6 +48,7 @@ def main():
         sys.exit(1)
 
     print(f"\n✓ Testing against: ./release/rawprox.exe")
+    sys.stdout.flush()
 
     # Find all test_*.py files in scripts directory
     test_files = sorted(scripts_dir.glob("test_*.py"))
@@ -58,24 +59,33 @@ def main():
 
     print("\n" + "=" * 60)
     print(f"Found {len(test_files)} test file(s)")
+    for test_file in test_files:
+        print(f"  - {test_file.name}")
     print("=" * 60)
+    sys.stdout.flush()
 
     failed_tests = []
 
     # Run each test file
     for test_file in test_files:
-        print(f"\nRunning {test_file.name}...")
-        print("-" * 60)
+        print(f"\n{'='*60}")
+        print(f"STARTING: {test_file.name}")
+        print(f"{'='*60}")
+        sys.stdout.flush()
+
         result = subprocess.run(
             ["uv", "run", "--script", str(test_file)],
             cwd=project_root
         )
+
+        sys.stdout.flush()
 
         if result.returncode != 0:
             failed_tests.append(test_file.name)
             print(f"❌ {test_file.name} FAILED")
         else:
             print(f"✓ {test_file.name} PASSED")
+        sys.stdout.flush()
 
     # Summary
     print("\n" + "=" * 60)

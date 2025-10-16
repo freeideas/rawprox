@@ -74,17 +74,28 @@ class EchoServer:
         if self.thread:
             self.thread.join(timeout=2)
 
-def send_request(proxy_port, message):
+def send_request(proxy_port, message, request_id):
     """Send a request through the proxy"""
     try:
+        print(f"  [Request {request_id}] Creating socket...", flush=True)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        print(f"  [Request {request_id}] Connecting to proxy...", flush=True)
         client.connect(('127.0.0.1', proxy_port))
+
+        print(f"  [Request {request_id}] Sending data...", flush=True)
         client.send(message)
+
+        print(f"  [Request {request_id}] Waiting for response...", flush=True)
         response = client.recv(4096)
+
+        print(f"  [Request {request_id}] Closing connection...", flush=True)
         client.close()
+
+        print(f"  [Request {request_id}] Done! Response matches: {response == message}", flush=True)
         return response == message
     except Exception as e:
-        print(f"Client error: {e}")
+        print(f"  [Request {request_id}] ERROR: {e}", flush=True)
         return False
 
 def main():
@@ -100,11 +111,14 @@ def main():
         sys.exit(1)
 
     # Start echo server
+    print(f"\nStarting echo server on port {TARGET_PORT}...", flush=True)
     echo_server = EchoServer(TARGET_PORT)
     echo_server.start()
     time.sleep(0.5)
+    print(f"✓ Echo server started", flush=True)
 
     # Start rawprox
+    print(f"Starting rawprox proxy on port {PROXY_PORT}...", flush=True)
     proxy_process = subprocess.Popen(
         [str(binary_path), f"{PROXY_PORT}:127.0.0.1:{TARGET_PORT}", "--flush-interval-ms=100"],
         stdout=subprocess.PIPE,
@@ -112,31 +126,42 @@ def main():
         text=True
     )
     time.sleep(0.5)
+    print(f"✓ Rawprox started", flush=True)
 
     try:
         print(f"\nSending {NUM_CONCURRENT} concurrent requests...")
+        sys.stdout.flush()
 
         # Send multiple concurrent requests
         threads = []
         for i in range(NUM_CONCURRENT):
             message = f"Request #{i}".encode()
-            thread = threading.Thread(target=send_request, args=(PROXY_PORT, message))
+            print(f"Starting request {i}...", flush=True)
+            thread = threading.Thread(target=send_request, args=(PROXY_PORT, message, i))
             thread.start()
             threads.append(thread)
             time.sleep(0.05)  # Slight stagger
 
+        print(f"\nWaiting for all {NUM_CONCURRENT} requests to complete...", flush=True)
         # Wait for all requests to complete
-        for thread in threads:
+        for i, thread in enumerate(threads):
+            print(f"Waiting for thread {i}...", flush=True)
             thread.join()
+            print(f"Thread {i} joined.", flush=True)
 
         print(f"✓ All {NUM_CONCURRENT} requests completed")
 
         # Get logs
+        print(f"\nWaiting for proxy to flush logs...", flush=True)
         time.sleep(0.5)
+        print(f"Terminating proxy process...", flush=True)
         proxy_process.terminate()
+        print(f"Waiting for proxy to exit...", flush=True)
         stdout, stderr = proxy_process.communicate(timeout=2)
+        print(f"✓ Proxy terminated", flush=True)
 
         # Parse logs
+        print(f"\nParsing logs...", flush=True)
         logs = []
         for line in stdout.strip().split('\n'):
             if line.strip():
@@ -145,6 +170,7 @@ def main():
                 except json.JSONDecodeError as e:
                     print(f"Failed to parse: {line}")
                     raise
+        print(f"✓ Parsed {len(logs)} log entries", flush=True)
 
         # Verify we have multiple unique ConnIDs
         conn_ids = set(log['ConnID'] for log in logs)

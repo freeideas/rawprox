@@ -27,7 +27,7 @@
 
 1. Document the bug in `./tmp/BUG_REPORT.md`
 2. Run `@"06) bug-report.md"` prompt
-3. Review the analysis report
+3. Review the report and make testing changes and/or documentation changes (see the procedures above)
 
 ---
 

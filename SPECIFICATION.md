@@ -1,13 +1,13 @@
 # RawProx Technical Specification
 
 Version: 2.0
-Last Updated: 2025-10-14
+Last Updated: 2025-10-16
 
-> **Related Documentation**: See [FOUNDATION.md](FOUNDATION.md) for project goals and philosophy. See [README.md](README.md) for usage examples and quick start.
+> **Documentation**: [FOUNDATION.md](FOUNDATION.md) - project goals and philosophy | [README.md](README.md) - usage examples and quick start | [doc/](doc/) - implementation notes
 
 ## 1. Overview
 
-RawProx is a transparent TCP proxy that intercepts network traffic between clients and servers, forwarding all data unchanged while logging every transmitted byte to stdout as NDJSON (Newline-Delimited JSON).
+RawProx is a transparent TCP proxy that intercepts network traffic between clients and servers, forwarding all data unchanged while logging every transmitted byte as NDJSON (Newline-Delimited JSON). Output is written to stdout by default, or to a file when specified via `@FILEPATH` argument.
 
 ### 1.1 Design Goals
 
@@ -32,7 +32,7 @@ See [FOUNDATION.md](FOUNDATION.md) for complete design goals and philosophy.
 - Each handler spawns two subtasks:
   - Client→Server forwarding and logging
   - Server→Client forwarding and logging
-- Atomic stdout writes prevent interleaved JSON objects
+- Double-buffered output system prevents network threads from blocking on I/O (see §8.1)
 
 ## 3. Command Line Interface
 
@@ -45,6 +45,7 @@ rawprox [ARGS ...]
 Where `ARGS` can be:
 - Port forwarding rules: `LOCAL_PORT:TARGET_HOST:TARGET_PORT`
 - Output file specifier: `@FILEPATH` (optional)
+- Flush interval: `--flush-interval-ms=MILLISECONDS` (optional)
 
 ### 3.2 Parameters
 
@@ -68,26 +69,48 @@ Each port forwarding rule has the format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`:
 Format: `@FILEPATH`
 
 **Behavior**:
-- If specified, all NDJSON output is appended to `FILEPATH` instead of stdout
+- If specified, all NDJSON output is written to `FILEPATH` instead of stdout
 - Parent directories are created automatically if they don't exist
-- The file is opened in append mode at startup (fail-fast: exits immediately if directories cannot be created or file cannot be opened/written)
+- File writes use double-buffering with minimum 2-second intervals between writes (see §8.1 and [doc/DOUBLE_BUFFERING.md](doc/DOUBLE_BUFFERING.md) for complete details)
 - Optional: without this argument, output goes to stdout (default behavior)
 - Can appear at any position among the arguments
 - If multiple `@` arguments are specified, the last one takes precedence
 
-**Examples**:
+**Example**:
 ```bash
-# Single port forwarding, output to stdout (default)
-rawprox 8080:example.com:80
-
-# Output to file instead of stdout
-rawprox 8080:example.com:80 @traffic.ndjson
-
 # Multiple port forwardings with file output
 rawprox 8080:api.example.com:80 3306:db.example.com:3306 @output.ndjson
+```
 
-# File argument can appear anywhere
-rawprox @logs.ndjson 8080:example.com:80 6379:localhost:6379
+#### 3.2.3 Flush Interval
+
+Format: `--flush-interval-ms=MILLISECONDS`
+
+**Behavior**:
+- Sets the buffer flush interval in milliseconds
+- Default: 2000ms (2 seconds) per §8.1
+- Minimum recommended: 100ms for testing, 2000ms for production (especially network drives)
+- Can appear at any position among the arguments
+- If multiple `--flush-interval-ms` arguments are specified, the last one takes precedence
+
+**Purpose**:
+- Controls how frequently buffered log entries are written to output
+- Higher values reduce I/O overhead and prevent issues on network drives (see [doc/LESSONS_LEARNED.md](doc/LESSONS_LEARNED.md))
+- Lower values provide more real-time output (useful for testing)
+
+**Examples**:
+```bash
+# Fast flushing for testing (100ms)
+rawprox 8080:example.com:80 --flush-interval-ms=100
+
+# Default 2-second interval (recommended for production)
+rawprox 8080:example.com:80 @output.ndjson
+
+# Explicit 2-second interval for network drive
+rawprox 8080:example.com:80 @//server/share/traffic.ndjson --flush-interval-ms=2000
+
+# Immediate flushing (0ms, not recommended)
+rawprox 8080:example.com:80 --flush-interval-ms=0
 ```
 
 ### 3.3 Error Behavior
@@ -248,8 +271,6 @@ The `data` field contains payload bytes encoded with **standard JSON escape sequ
 - Async accept loop (log errors to stderr, continue)
 - DNS resolution per connection (no caching)
 - Failed target connection: close client socket, no log entries
-- Buffer size: 32KB
-- Read/write errors: break forwarding loop for that direction
 - Connection termination: EOF (0-byte read) logs `close` event, both directions logged independently
 
 ## 7. Streaming Capture
@@ -258,22 +279,28 @@ The `data` field contains payload bytes encoded with **standard JSON escape sequ
 
 To reconstruct: group by `ConnID`, sort by `time`, concatenate `data` fields.
 
-## 8. Concurrency
+## 8. Concurrency and Output Buffering
+
+### 8.1 Double-Buffered Output System
+
+Output (stdout or file) uses double-buffering with minimum 2-second swap intervals to prevent network threads from blocking on I/O operations.
+
+**Output destinations:**
+- Stdout (default): When no `@FILEPATH` specified
+- File: When `@FILEPATH` specified, uses open-append-close per write cycle
+
+See [doc/DOUBLE_BUFFERING.md](doc/DOUBLE_BUFFERING.md) for complete architecture and implementation details.
+
+### 8.2 Async Runtime
 
 - Tokio async runtime: one task per connection, two subtasks for bidirectional forwarding
 - ConnID counter: atomic u64 with SeqCst ordering
-- **Separate writer thread**: Dedicated thread receives log messages via channel and writes to stdout/file with a 128KB buffer. Forwarding tasks never block on I/O. Output is flushed every 2 seconds and on shutdown, with flush errors tolerated to support network drives.
-- Stdout writes are atomic per JSON object (no interleaving)
 - Per-connection state is task-local (no shared state)
 
 ## 9. Error Handling
 
 - Invalid arguments or bind failure: print error to stderr, exit 1
 - Connection errors: cleanup, log close event if connection was established
-- Stdout writes are atomic per JSON object
-- Output buffering and flushing: 128KB write buffer. Flushed every 2 seconds and on shutdown. Flush errors are tolerated (not fatal) to support Windows network drives where frequent flush operations may fail with OS errors. On abrupt termination, up to 128KB of recent log data may be lost.
-
-## 10. Dependencies
-
-Tokio, Serde, Chrono, and base62 implementation.
+- Output writes: all errors are reported (never ignored), program exits on write failure
+- Buffered output: on abrupt termination (kill -9, crash), up to 2 seconds of data in Input Buffer may be lost (bounded by swap interval)
 

@@ -143,7 +143,24 @@ Double buffering solves this: one batched write every N seconds (vs. thousands),
 
 ## As an Independent Component
 
-Can be implemented as a reusable `BufferedFileWriter` with `append(data)` (thread-safe, non-blocking) and `close()` (final write) methods. Configure with file path and swap interval. Replace `file.write(data)` with `buffered_writer.append(data)` - component handles all buffering, swapping, and I/O. Benefits: plug-and-play, format-agnostic (treats data as opaque bytes), thread-safe, testable (mockable), reusable across logging, metrics, events, etc.
+Can be implemented as a reusable `BufferedWriter` with `append(data)` (thread-safe, non-blocking) and `close()` (final write) methods.
+
+**Configuration:**
+- Swap interval (minimum time between writes)
+- Output callback/method provided by the user
+
+**Output Flexibility:**
+The component accepts a user-provided output method/callback that receives the full buffer contents. This allows the same component to support multiple output targets:
+- **File writes:** Open in append mode, write buffer, close file
+- **Stdout:** Write buffer to stdout (no open/close needed)
+- **Network socket:** Send buffer over TCP/UDP connection
+- **Custom handlers:** Compression, encryption, remote logging services, etc.
+
+**Usage:**
+Replace direct writes (`file.write(data)`, `stdout.write(data)`, etc.) with `buffered_writer.append(data)` - component handles all buffering, swapping, and I/O via the user-provided output method.
+
+**Benefits:**
+Plug-and-play, format-agnostic (treats data as opaque bytes), output-target-agnostic (works with files, stdout, sockets, etc.), thread-safe, testable (mockable output method), reusable across logging, metrics, events, telemetry, etc.
 
 ---
 

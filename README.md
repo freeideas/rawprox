@@ -2,7 +2,17 @@
 
 A transparent TCP proxy that logs every byte of network traffic as it passes through. Outputs streaming NDJSON (Newline-Delimited JSON) for easy parsing and analysis.
 
-> **Related Documentation**: See [FOUNDATION.md](FOUNDATION.md) for project goals and philosophy. See [SPECIFICATION.md](SPECIFICATION.md) for the complete technical specification.
+> **Documentation**: [FOUNDATION.md](FOUNDATION.md) - project goals and philosophy | [doc/](doc/) - implementation notes
+
+## Installation
+
+Download pre-built binaries from [releases](https://github.com/yourusername/rawprox/releases), or build from source:
+
+```bash
+cargo build --release
+```
+
+The executable will be at `./target/release/rawprox` (or `rawprox.exe` on Windows).
 
 ## Quick Start
 
@@ -19,6 +29,8 @@ curl http://localhost:8080
 
 **Note**: If you get an error like "Port 8080 is already in use", another process is listening on that port. Choose a different port or stop the conflicting process.
 
+For use cases and design philosophy, see [FOUNDATION.md](FOUNDATION.md).
+
 ## Usage
 
 ```bash
@@ -31,6 +43,7 @@ rawprox [ARGS ...]
   - `TARGET_HOST` - Destination hostname or IP to forward traffic to
   - `TARGET_PORT` - Destination port to forward traffic to
 - **Output file** (optional): `@FILEPATH` - Write output to file instead of stdout (directories created automatically)
+- **Flush interval** (optional): `--flush-interval-ms=MILLISECONDS` - Buffer flush interval in milliseconds (default: 2000)
 
 **Multiple ports**: You can specify multiple port forwardings to monitor several services simultaneously from one proxy instance.
 
@@ -51,6 +64,9 @@ rawprox 8080:api.example.com:80 3306:db.example.com:3306 6379:localhost:6379
 # Save all traffic to a file (using @file argument)
 rawprox 9000:server.com:443 @traffic.ndjson
 
+# Fast flushing for testing (100ms interval)
+rawprox 8080:api.example.com:80 --flush-interval-ms=100 @debug.ndjson
+
 # Can also use shell redirection if preferred
 rawprox 9000:server.com:443 > traffic.ndjson
 ```
@@ -59,16 +75,13 @@ rawprox 9000:server.com:443 > traffic.ndjson
 
 RawProx outputs NDJSON (Newline-Delimited JSON) to stdout - one JSON object per line.
 
-**Example output:**
+**Example:**
 ```json
 {"time":"2025-10-14T15:32:47.123456Z","ConnID":"0tK3X","event":"open","from":"127.0.0.1:54321","to":"example.com:80"}
-{"time":"2025-10-14T15:32:47.234567Z","ConnID":"0tK3X","data":"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n","from":"127.0.0.1:54321","to":"example.com:80"}
-{"time":"2025-10-14T15:32:47.345678Z","ConnID":"0tK3X","data":"HTTP/1.1 200 OK\r\n\r\nHello!","from":"example.com:80","to":"127.0.0.1:54321"}
+{"time":"2025-10-14T15:32:47.234567Z","ConnID":"0tK3X","data":"GET / HTTP/1.1\r\n...","from":"127.0.0.1:54321","to":"example.com:80"}
 {"time":"2025-10-14T15:32:47.456789Z","ConnID":"0tK3X","event":"close","from":"example.com:80","to":"127.0.0.1:54321"}
 ```
 
-Each log entry shows timestamp, connection ID, and data/event. Data is logged as transmitted (streaming), not buffered. See [SPECIFICATION.md](SPECIFICATION.md) for details.
+Each line is a JSON object with fields like `time`, `ConnID`, `event`/`data`, `from`, `to`.
 
-## Use Cases
-
-Protocol debugging, API reverse engineering, integration testing, learning network protocols. See [FOUNDATION.md](FOUNDATION.md) for details.
+For complete format specification, see [SPECIFICATION.md](SPECIFICATION.md).

@@ -32,20 +32,25 @@ A TCP proxy that acts as a perfect middleman: it sits between a client and serve
 
 7. **Binary-Safe Logging**: Text remains readable while binary data is URL-encoded (percent-encoded), preserving both usability and completeness.
 
-8. **Non-Blocking Logging**: A dedicated writer thread handles all output I/O, ensuring network forwarding never blocks on slow log consumers.
+8. **Non-Blocking I/O**: Output uses double-buffered writes with periodic flushing (minimum 2 seconds between writes), ensuring network forwarding never blocks on I/O operations whether writing to stdout or files. See [doc/DOUBLE_BUFFERING.md](doc/DOUBLE_BUFFERING.md) for the buffering architecture.
 
 9. **Simplicity**: One tool, one purpose. No configuration files, no complex setup, no unnecessary features.
 
 ## Use Cases
 
-For detailed use cases and practical examples, see [README.md](README.md).
+- **Protocol Debugging**: See exactly what bytes your client sends/receives when communicating with servers
+- **API Reverse Engineering**: Understand undocumented protocols by observing actual traffic patterns
+- **Integration Testing**: Verify your application sends correct protocol messages in the right sequence
+- **Performance Analysis**: Identify chatty protocols or inefficient message patterns causing slowdowns
+- **Security Analysis**: Detect credential leakage, unencrypted passwords, or protocol vulnerabilities
+- **Learning Protocols**: Study how real protocols work by watching live traffic (HTTP, Redis, MySQL, PostgreSQL, SMTP, etc.)
 
 ## Design Philosophy
 
 The tool should be:
 - **Minimal**: Do one thing perfectly rather than many things adequately
 - **Fast**: Handle high-throughput connections without becoming a bottleneck
-- **Reliable**: Never crash, never modify traffic, graceful degradation on platform limitations (e.g., tolerates flush errors on network drives)
+- **Reliable**: Never crash, never modify traffic, works on network drives and local filesystems. See [doc/LESSONS_LEARNED.md](doc/LESSONS_LEARNED.md) for Windows network drive considerations.
 - **Parseable**: Output should be both human-readable and machine-processable
 - **Self-Contained**: Single executable, no dependencies, no installation
 - **Clear Error Messages**: When things go wrong (e.g., port already in use), provide actionable error messages

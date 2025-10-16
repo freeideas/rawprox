@@ -85,16 +85,11 @@ def main():
     print("=" * 60)
 
     # Find the rawprox binary
-    binary_path = Path("release/x86win64/rawprox.exe")
+    binary_path = Path("release/rawprox.exe")
     if not binary_path.exists():
-        binary_path = Path("release/x86linux64/rawprox")
-        if not binary_path.exists():
-            binary_path = Path("target/release/rawprox.exe")
-            if not binary_path.exists():
-                binary_path = Path("target/release/rawprox")
-                if not binary_path.exists():
-                    print("ERROR: Could not find rawprox binary")
-                    sys.exit(1)
+        print("ERROR: Could not find rawprox binary at release/rawprox.exe")
+        print("Run: uv run --script scripts/build.py")
+        sys.exit(1)
 
     # Test with various binary patterns
     test_cases = [

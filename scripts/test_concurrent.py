@@ -16,6 +16,7 @@ import threading
 import time
 import json
 import sys
+import os
 from pathlib import Path
 
 # Fix Windows console encoding for Unicode characters
@@ -92,16 +93,11 @@ def main():
     print("=" * 60)
 
     # Find the rawprox binary
-    binary_path = Path("release/x86win64/rawprox.exe")
+    binary_path = Path("release/rawprox.exe")
     if not binary_path.exists():
-        binary_path = Path("release/x86linux64/rawprox")
-        if not binary_path.exists():
-            binary_path = Path("target/release/rawprox.exe")
-            if not binary_path.exists():
-                binary_path = Path("target/release/rawprox")
-                if not binary_path.exists():
-                    print("ERROR: Could not find rawprox binary")
-                    sys.exit(1)
+        print("ERROR: Could not find rawprox binary at release/rawprox.exe")
+        print("Run: uv run --script scripts/build.py")
+        sys.exit(1)
 
     # Start echo server
     echo_server = EchoServer(TARGET_PORT)
@@ -110,7 +106,7 @@ def main():
 
     # Start rawprox
     proxy_process = subprocess.Popen(
-        [str(binary_path), f"{PROXY_PORT}:127.0.0.1:{TARGET_PORT}"],
+        [str(binary_path), f"{PROXY_PORT}:127.0.0.1:{TARGET_PORT}", "--flush-interval-ms=100"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True

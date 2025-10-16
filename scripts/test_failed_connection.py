@@ -30,16 +30,11 @@ def main():
     print("=" * 60)
 
     # Find the rawprox binary
-    binary_path = Path("release/x86win64/rawprox.exe")
+    binary_path = Path("release/rawprox.exe")
     if not binary_path.exists():
-        binary_path = Path("release/x86linux64/rawprox")
-        if not binary_path.exists():
-            binary_path = Path("target/release/rawprox.exe")
-            if not binary_path.exists():
-                binary_path = Path("target/release/rawprox")
-                if not binary_path.exists():
-                    print("ERROR: Could not find rawprox binary")
-                    sys.exit(1)
+        print("ERROR: Could not find rawprox binary at release/rawprox.exe")
+        print("Run: uv run --script scripts/build.py")
+        sys.exit(1)
 
     # Start rawprox pointing to non-existent target
     print(f"\nStarting rawprox pointing to non-existent target port {NONEXISTENT_TARGET_PORT}...")
@@ -93,27 +88,17 @@ def main():
 
         print(f"\nLog entries: {len(lines)}")
 
-        if len(lines) == 0:
-            print("  ✓ No log entries for failed connection (per SPEC §6)")
-        else:
-            print(f"  Note: Found {len(lines)} log entry(ies):")
+        # SPEC §6: "Failed target connection: close client socket, no log entries"
+        # This means ZERO log entries, not just "no data entries"
+        if len(lines) != 0:
+            print(f"  ✗ Expected 0 log entries, found {len(lines)}:")
             for line in lines:
                 print(f"    {line}")
 
-            # Per spec, there should be no entries, but some implementations
-            # might log the attempt. Let's verify there's at least no 'data' entries.
-            import json
-            has_data = False
-            for line in lines:
-                try:
-                    log = json.loads(line)
-                    if 'data' in log:
-                        has_data = True
-                except:
-                    pass
+        assert len(lines) == 0, \
+            f"SPEC §6 requires NO log entries for failed connection, but found {len(lines)}"
 
-            assert not has_data, "Should not have 'data' entries for failed connection"
-            print("  ✓ No data entries for failed connection")
+        print("  ✓ No log entries for failed connection (per SPEC §6)")
 
         print("\n" + "=" * 60)
         print("✓ Failed target connection test passed!")

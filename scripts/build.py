@@ -46,6 +46,16 @@ def main():
     print("RawProx Build (Windows x64)")
     print("=" * 60)
 
+    # Delete existing binary first (fail-fast: if build fails, no binary exists)
+    dest_dir = project_root / "release"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / binary
+
+    if dest.exists():
+        print(f"\nDeleting existing {binary}...")
+        dest.unlink()
+        print(f"✓ Deleted ./release/{binary}")
+
     # Ensure target is installed
     ensure_target_installed(target)
 
@@ -66,9 +76,6 @@ def main():
 
     # Move binary to ./release/
     source = project_root / "target" / target / "release" / binary
-    dest_dir = project_root / "release"
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / binary
 
     print(f"\nMoving {binary} to ./release/{binary}...")
     shutil.move(str(source), str(dest))

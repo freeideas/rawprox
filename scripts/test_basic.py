@@ -90,10 +90,9 @@ def main():
     project_root = Path(__file__).parent.parent
     release_dir = project_root / "release"
 
-    # Define binaries to test
+    # Define binary to test
     binaries = [
-        (release_dir / "x86win64" / "rawprox.exe", "Windows x86_64"),
-        (release_dir / "x86linux64" / "rawprox", "Linux x86_64")
+        (release_dir / "rawprox.exe", "RawProx")
     ]
 
     print("=" * 60)

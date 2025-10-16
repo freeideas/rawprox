@@ -15,6 +15,7 @@ import threading
 import time
 import json
 import sys
+import os
 from pathlib import Path
 
 # Fix Windows console encoding for Unicode characters
@@ -90,16 +91,11 @@ def main():
     print("=" * 60)
 
     # Find the rawprox binary
-    binary_path = Path("release/x86win64/rawprox.exe")
+    binary_path = Path("release/rawprox.exe")
     if not binary_path.exists():
-        binary_path = Path("release/x86linux64/rawprox")
-        if not binary_path.exists():
-            binary_path = Path("target/release/rawprox.exe")
-            if not binary_path.exists():
-                binary_path = Path("target/release/rawprox")
-                if not binary_path.exists():
-                    print("ERROR: Could not find rawprox binary")
-                    sys.exit(1)
+        print("ERROR: Could not find rawprox binary at release/rawprox.exe")
+        print("Run: uv run --script scripts/build.py")
+        sys.exit(1)
 
     # Start echo server
     echo_server = EchoServer(TARGET_PORT)
@@ -120,7 +116,7 @@ def main():
             pass
 
     proxy_process = subprocess.Popen(
-        [str(binary_path), f"{PROXY_PORT}:127.0.0.1:{TARGET_PORT}"],
+        [str(binary_path), f"{PROXY_PORT}:127.0.0.1:{TARGET_PORT}", "--flush-interval-ms=100"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
@@ -234,6 +230,28 @@ def main():
             "Reconstructed message size doesn't match original"
 
         print(f"  ✓ Message can be reconstructed from chunks")
+
+        # Verify chunk sizes are reasonable (should be ~32KB per SPEC §6)
+        print(f"\nChunk size analysis:")
+        for i, log in enumerate(client_to_server_logs):
+            # Each 'data' field contains encoded data
+            # Count bytes in the original data (not encoded length)
+            data_field = log['data']
+            # Rough estimate: percent-encoded adds overhead
+            # For printable ASCII (our test data), no percent-encoding
+            # So data field length ~= original byte count
+            print(f"  Chunk {i+1}: ~{len(data_field):,} bytes (encoded)")
+
+        # For 100KB message, expect chunks close to 32KB
+        # (Some variation is acceptable due to buffering)
+        max_chunk = max(len(log['data']) for log in client_to_server_logs)
+        print(f"  Largest chunk: {max_chunk:,} bytes")
+
+        # Verify chunks are reasonably sized (not entire message in one chunk)
+        assert max_chunk < len(large_message), \
+            "All data should not be in a single chunk (streaming required)"
+
+        print(f"  ✓ Data streamed in chunks (not buffered as single message)")
 
         print("\n" + "=" * 60)
         print("✓ Streaming/chunking test passed!")

@@ -1,15 +1,24 @@
-Please read @FOUNDATION.md and then create the skeleton of this project.
+# Create Project from Foundation
 
-1) README.md - a background about this project; written for all audiences.
-2) SPECIFICATION.md - the specification of the project; written for experienced developers who have already read README.md.
-3) ./scripts/build.py - builds the final output, and copies it to ./release/
-4) ./scripts/test.py - runs build.py and then finds and runs every test_*.py file in the ./scripts/ directory. Each of these test_*.py tests the binary in the ./release/ directory.
-5) ./release/ directory, which will contain the final binary
+Read `@FOUNDATION.md` and create the project skeleton:
 
-Remember that we run .py scripts with uv run --script; not python directly.
+## Files to Create
 
-Do not create arbitrary specifications that would be easily discovered by the developers with real-life experience.
+1. **README.md** — Project overview for all audiences
+2. **SPECIFICATION.md** — Technical specification for experienced developers (assumes they've read README)
+3. **./scripts/build.py** — Builds the project and outputs to `./release/`
+4. **./scripts/test.py** — Runs build.py, then discovers and executes all `test_*.py` scripts in `./scripts/`. Each test validates the binary in `./release/`
+5. **./release/** — Directory for final binaries
 
-Do not compare or contrast with previous designs; we are not historians; we are concerned only with the current design; no traces of previous incarnations should exist in documentation nor in code.
+## Execution Model
 
-This is a minimum viable project. Do not include anything that is nice to have, do not cover edge cases unless we are sure they will actually be needed, and whatever naturally happens in error conditions is probably good enough.
+Python scripts are run with `uv run --script`, not with `python` directly.
+
+## Design Principles
+
+- **Minimum viable scope**: Include only essential functionality
+- **No speculative features**: Omit "nice-to-have" additions
+- **Realistic edge cases only**: Cover edge cases only if they're likely in production
+- **Natural error handling**: Accept default error behavior unless explicit handling is needed
+- **No historical context**: Eliminate all traces of previous designs from documentation and code
+- **Trust developer expertise**: Don't specify implementation details that experienced developers already know

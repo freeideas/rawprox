@@ -1,49 +1,49 @@
-# Project Reorganization Prompt
+# Project Reorganization
 
-Reorganize this project into a clean, minimum-viable structure. Include only what's absolutely necessary.
+Reorganize this project into a clean, minimum-viable structure. Include only essential elements.
 
-## What to Create or re-write
+## Documents to Create
 
 ### `README.md`
-- **Audience**: Everyone
-- **Content**: What it does, how to use it, basic examples
-- **Keep it**: Clear, concise, practical
+- **Audience**: All users
+- **Content**: Purpose, usage instructions, practical examples
+- **Style**: Clear, concise, actionable
 
 ### `SPECIFICATION.md`
 - **Audience**: Experienced developers
 - **Content**: Architecture, behavior specs, platform requirements
-- **Keep it**: Precise, technical, concise
-- **Avoid**: Code examples (developers know how to code), unnecessary constraints
-- **Error handling**: Minimal only - basic checks, no edge cases unless they'll actually happen
-- **Edge cases**: Only specify realistic ones that will occur in practice
+- **Style**: Precise, technical, unambiguous
+- **Exclude**: Code examples (developers understand patterns), hypothetical constraints
+- **Error handling**: Cover only realistic failure scenarios
+- **Edge cases**: Document only those likely to occur in production
 
 ### `./scripts/build.py`
-- Builds project, creates `./release/*.exe`
-- PEP 723 dependencies, `#!/usr/bin/env uvrun` shebang
+- Builds project and outputs to `./release/*.exe`
+- Uses PEP 723 dependencies with `#!/usr/bin/env uvrun` shebang
 
 ### `./scripts/test.py`
-- Runs all tests
-- PEP 723 dependencies, `#!/usr/bin/env uvrun` shebang
+- Executes complete test suite
+- Uses PEP 723 dependencies with `#!/usr/bin/env uvrun` shebang
 
-### `./doc/` directory
-- **Purpose**: Background and implementation guidance documents
-- **Keep**: Technical deep-dives, platform-specific notes, algorithm explanations
-- **Examples**: Performance optimization guides, API usage patterns, design rationale
-- **Don't move**: These provide valuable context for developers
+### `./doc/` Directory
+- **Purpose**: Implementation guidance and technical background
+- **Include**: Deep dives, platform-specific notes, algorithm explanations
+- **Examples**: Performance optimization, API patterns, design rationale
+- **Preserve**: These documents provide essential developer context
 
-## Process
+## Reorganization Steps
 
-1. Read all `.md` and `.py` files
-2. Move outdated/redundant content to `./old/`
-3. Preserve background/technical docs in `./doc/`
-4. Write README.md and SPECIFICATION.md with minimal overlap
-5. Create/update build.py and test.py scripts
-6. Keep everything concise - this is a minimum-viable project
+1. Read all `.md` and `.py` files to understand current state
+2. Archive outdated or redundant content in `./old/`
+3. Preserve technical documentation in `./doc/`
+4. Write README.md and SPECIFICATION.md with zero overlap
+5. Create or update build.py and test.py scripts
+6. Maintain brevity—this is minimum-viable scope
 
-## Key Principles
+## Core Principles
 
-- Minimal error handling - basic checks only
-- No hypothetical edge cases - only realistic scenarios
-- No unnecessary constraints or requirements
-- Very little code in specs
-- No overlap between documents
+- **Error handling**: Basic validation only
+- **Edge cases**: Realistic scenarios exclusively
+- **Constraints**: Necessary requirements only
+- **Code examples**: Minimal to none in specifications
+- **Document overlap**: Eliminate redundancy

@@ -1,8 +1,19 @@
-Read @README.md and @SPECIFICATION.md for background.
+# Code-Documentation Consistency Check
 
-Please find every *.md document in this tree of files (but ignore the ./prompts directory and the ./reports directory), and verify that the source code is consistent with it.
-Make any code changes needed for consistency.
+Read `@README.md` and `@SPECIFICATION.md` for context.
 
-Remember that we don't want any memory of previous implementations to show in the code. We must not waste our limited focus on historical knowledge.
+## Task
 
-You should first find all the .md files, then make a plan for which files to compare against which code, so you won't have to remember all the .md files at once.
+Locate all `*.md` documentation files (excluding `./prompts/` and `./reports/`), then verify that source code matches documented specifications. Make code changes as needed to ensure consistency.
+
+## Important Principles
+
+- **No historical artifacts**: Remove all traces of previous implementations from code
+- **Focus on current design**: Don't preserve outdated patterns or comments
+- **Limited cognitive load**: Don't try to hold all documentation in memory at once
+
+## Recommended Approach
+
+1. Find all `.md` files in the project
+2. Create a mapping plan: which documentation sections correspond to which code files
+3. Work through comparisons systematically, one mapping at a time

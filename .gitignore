@@ -1,6 +1,11 @@
-# Rust build artifacts
-/target/
-Cargo.lock
+# C# / .NET build artifacts
+bin/
+obj/
+*.dll
+*.pdb
+*.user
+*.suo
+*.cache
 
 # IDE and editor files
 .idea/
@@ -16,9 +21,6 @@ tmp/
 reports/
 *.tmp
 *.bak
-
-# Debug files
-*.pdb
 
 # Keep releases directory - we want binaries in GitHub
 # /releases/ is NOT ignored

@@ -9,13 +9,12 @@ A transparent TCP proxy that logs every byte of network traffic as it passes thr
 Download pre-built binaries from [releases](https://github.com/yourusername/rawprox/releases), or build from source:
 
 **Requirements:**
-- JDK 21 or later
-- GraalVM (for native-image compilation)
-- Maven (for dependency management)
+- .NET 8 SDK or later
+- Native AOT workload (for standalone compilation)
 
 ```bash
-# Build native executable with GraalVM
-mvn clean package -Pnative
+# Build native executable with .NET Native AOT
+uv run --script ./scripts/build.py
 ```
 
 The executable will be at `./release/rawprox.exe` (Windows) or `./release/rawprox` (Linux/macOS).
@@ -24,7 +23,7 @@ The executable will be at `./release/rawprox.exe` (Windows) or `./release/rawpro
 
 ```bash
 # Build native executable
-mvn clean package -Pnative
+uv run --script ./scripts/build.py
 
 # Run: Listen on port 8080, forward to example.com:80
 ./release/rawprox.exe 8080:example.com:80

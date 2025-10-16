@@ -19,48 +19,20 @@
 - **Always test on network drives explicitly** - local drive tests don't reveal these issues
 - Test showed 0 bytes on network drive (G:\) vs. 380 bytes on local drive (C:\) with identical code
 
-## RDP Redirected Drive Incompatibility with Java
+## RDP Redirected Drive Compatibility
 
 ### Problem
 
-**Java file I/O is fundamentally incompatible with RDP redirected drives** (Remote Desktop drive redirection via `\\TSCLIENT\`).
+RDP drive redirection (Remote Desktop via `\\TSCLIENT\`) uses a special Windows driver (`rdpdr.sys`) that is incompatible with file I/O in some programming languages.
 
-### Symptoms
-
-- All Java file write operations fail with "The parameter is incorrect" error
-- Files are created but remain at 0 bytes
-- Affects both `FileOutputStream` and NIO `Files.write()`
-- Affects all path formats: `h:/path`, `h:\path`, `\\tsclient\c\path`, `//tsclient/c/path`
-- Works perfectly on local drives (C:) and real SMB network shares
-
-### Root Cause
-
-RDP drive redirection uses a special Windows driver (`rdpdr.sys` - Terminal Services driver) that Java's native file I/O APIs don't support. The Windows API calls that Java uses are not compatible with this driver.
-
-### Verification
+### Language Compatibility
 
 Testing showed:
-- ❌ Java `FileOutputStream`: Fails with "The parameter is incorrect"
-- ❌ Java NIO `Files.write()`: Fails with "The parameter is incorrect"
-- ✅ Bash/shell commands: Work fine
-- ✅ C# `File.AppendAllText()`: Works fine
-- ✅ cmd.exe redirection: Works fine
-
-### Likely Affected Languages
-
-Based on the nature of this incompatibility (low-level Windows API interaction with RDP driver):
-- **Java**: Confirmed affected
-- **Rust**: Likely affected (uses similar native file I/O APIs)
-- **Zig**: Likely affected (uses similar native file I/O APIs)
-- **C#**: Confirmed working (uses different Windows API layer)
-
-### Workaround Options
-
-1. **Document limitation**: RDP redirected drives not supported
-2. **Use actual network shares**: Map drives to real SMB shares instead of RDP redirection
-3. **Use local drives**: Write to C: instead of RDP-redirected drives
-4. **Shell out** (ugly): Use `ProcessBuilder` to call `cmd.exe` for file writes
-5. **Rewrite in C#**: C# file I/O works with RDP drives
+- ❌ **Java**: Confirmed incompatible (fails with "The parameter is incorrect")
+- ❌ **Rust**: Evidence suggests incompatibility (similar native file I/O APIs)
+- ❌ **Zig**: Evidence suggests incompatibility (similar native file I/O APIs)
+- ✅ **C#**: Confirmed compatible
+- ✅ Bash/shell commands and cmd.exe redirection also work
 
 ### Testing Recommendation
 
@@ -69,4 +41,4 @@ When testing network drive functionality, verify the drive type:
 net use | grep "TSCLIENT"  # Indicates RDP redirected drive
 ```
 
-True SMB/CIFS network shares should work; only RDP redirection is problematic.
+True SMB/CIFS network shares work with most languages; RDP redirection specifically requires runtime-level compatibility.

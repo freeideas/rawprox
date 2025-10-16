@@ -9,37 +9,31 @@ import subprocess
 import shutil
 import os
 from pathlib import Path
-import glob
 
 # Fix Windows console encoding for Unicode characters
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-def check_native_image():
-    """Check if native-image is available"""
-    print("Checking for GraalVM native-image...")
+def check_dotnet():
+    """Check if dotnet SDK is available"""
+    print("Checking for .NET SDK...")
     try:
         result = subprocess.run(
-            ["native-image", "--version"],
+            ["dotnet", "--version"],
             capture_output=True,
             text=True
         )
 
         if result.returncode == 0:
-            print(f"✓ GraalVM native-image found")
-            print(result.stdout.strip())
+            print(f"✓ .NET SDK found: {result.stdout.strip()}")
             return True
     except FileNotFoundError:
         pass
 
-    print("⚠ GraalVM native-image not found", file=sys.stderr)
-    print("  Please install GraalVM and native-image", file=sys.stderr)
+    print("⚠ .NET SDK not found", file=sys.stderr)
+    print("  Please install .NET 8 SDK or later", file=sys.stderr)
     return False
-
-def find_java_files(src_dir):
-    """Find all .java files recursively"""
-    return list(Path(src_dir).rglob("*.java"))
 
 def main():
     # Get project root (parent of scripts directory)
@@ -49,7 +43,7 @@ def main():
     binary = "rawprox.exe"
 
     print("=" * 60)
-    print("RawProx Build (Java/GraalVM Native)")
+    print("RawProx Build (C#/.NET Native AOT)")
     print("=" * 60)
 
     # Delete existing binary first (fail-fast: if build fails, no binary exists)
@@ -62,81 +56,64 @@ def main():
         dest.unlink()
         print(f"✓ Deleted ./release/{binary}")
 
-    # Check for native-image
-    has_native_image = check_native_image()
-    if not has_native_image:
+    # Check for dotnet SDK
+    has_dotnet = check_dotnet()
+    if not has_dotnet:
         sys.exit(1)
 
-    # Create build directory
-    build_dir = project_root / "build"
-    build_dir.mkdir(exist_ok=True)
+    # Build with Native AOT
+    print("\nBuilding native executable with .NET Native AOT...")
 
-    # Find all Java source files
-    src_dir = project_root / "src" / "main" / "java"
-    java_files = find_java_files(src_dir)
+    # Add Visual Studio toolchain and installer to PATH
+    vs_tools_path = r"C:\acex\mountz\vstools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64"
+    vs_installer_path = r"C:\Program Files (x86)\Microsoft Visual Studio\Installer"
+    env = os.environ.copy()
+    env["PATH"] = vs_tools_path + os.pathsep + vs_installer_path + os.pathsep + env["PATH"]
 
-    if not java_files:
-        print("❌ No Java source files found", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"\nFound {len(java_files)} Java source files")
-
-    # Compile Java files
-    print("\nCompiling Java sources...")
-    java_file_paths = [str(f) for f in java_files]
-
-    compile_cmd = [
-        "javac",
-        "-d", str(build_dir),
-        "--release", "21"
-    ] + java_file_paths
-
-    result = subprocess.run(compile_cmd, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        print("❌ Compilation failed", file=sys.stderr)
-        print(result.stderr, file=sys.stderr)
-        sys.exit(1)
-
-    print("✓ Compilation successful")
-
-    # Build native image
-    print("\nBuilding native executable with GraalVM...")
-    native_image_cmd = [
-        "native-image",
-        "-cp", str(build_dir),
-        "com.rawprox.Main",
-        "rawprox",
-        "--no-fallback",
-        "-H:+ReportExceptionStackTraces"
+    build_cmd = [
+        "dotnet", "publish",
+        "-c", "Release",
+        "-r", "win-x64",
+        "--self-contained",
+        "-p:PublishAot=true",
+        "-p:StripSymbols=true"
     ]
 
-    result = subprocess.run(native_image_cmd, capture_output=True, text=True)
+    result = subprocess.run(build_cmd, capture_output=True, text=True, env=env)
 
     if result.returncode != 0:
-        print("❌ Native image build failed", file=sys.stderr)
+        print("❌ Native AOT build failed", file=sys.stderr)
+        print(result.stdout, file=sys.stderr)
         print(result.stderr, file=sys.stderr)
         sys.exit(1)
 
-    print("✓ Native image built successfully")
+    print("✓ Native AOT build successful")
 
     # Find and move the native executable
-    native_exe = project_root / "rawprox.exe"
-    if not native_exe.exists():
-        native_exe = project_root / "rawprox"
+    native_exe = project_root / "bin" / "Release" / "net8.0" / "win-x64" / "publish" / "rawprox.exe"
 
     if not native_exe.exists():
-        print(f"❌ Native executable not found", file=sys.stderr)
-        sys.exit(1)
+        # Try alternative paths
+        alt_paths = list((project_root / "bin").rglob("rawprox.exe"))
+        if alt_paths:
+            native_exe = alt_paths[0]
+        else:
+            print(f"❌ Native executable not found", file=sys.stderr)
+            sys.exit(1)
 
     print(f"\nMoving {native_exe.name} to ./release/{binary}...")
-    shutil.move(str(native_exe), str(dest))
-    print(f"✓ Binary moved to ./release/{binary}")
+    shutil.copy2(str(native_exe), str(dest))
+    print(f"✓ Binary copied to ./release/{binary}")
 
     # Clean up build directory
     print("\nCleaning up build directory...")
-    shutil.rmtree(build_dir, ignore_errors=True)
-    print("✓ Build directory cleaned")
+    bin_dir = project_root / "bin"
+    obj_dir = project_root / "obj"
+    if bin_dir.exists():
+        shutil.rmtree(bin_dir, ignore_errors=True)
+    if obj_dir.exists():
+        shutil.rmtree(obj_dir, ignore_errors=True)
+    print("✓ Build directories cleaned")
 
     # Summary
     print("\n" + "=" * 60)

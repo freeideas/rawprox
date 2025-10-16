@@ -6,7 +6,7 @@
 
 RawProx is a transparent TCP proxy that intercepts network traffic between clients and servers, forwarding all data unchanged while logging every transmitted byte as NDJSON (Newline-Delimited JSON). Output is written to stdout by default, or to a file when specified via `@FILEPATH` argument.
 
-**Implementation**: Java application compiled to native executable using GraalVM native-image. The native binary requires no JVM at runtime.
+**Implementation**: C# application compiled to native executable using .NET Native AOT. The native binary requires no .NET runtime at runtime.
 
 ### 1.1 Design Goals
 

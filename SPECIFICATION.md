@@ -303,6 +303,26 @@ Output (stdout or file) uses double-buffering with minimum 2-second swap interva
 
 See [doc/DOUBLE_BUFFERING.md](doc/DOUBLE_BUFFERING.md) for complete architecture and implementation details.
 
+#### 8.1.1 Write Validation (Network Drive Protection)
+
+**File writes MUST be validated to detect truncation:**
+
+Windows network drives (SMB/CIFS, RDP redirected drives) can silently truncate large writes without throwing exceptions. To prevent silent data corruption, file write operations MUST:
+
+1. **Measure bytes written:** Record file position before and after write
+2. **Calculate expected bytes:** Use `Encoding.UTF8.GetByteCount()` on content
+3. **Verify match:** Compare bytes written vs. expected
+4. **Fail-fast on mismatch:** Throw `IOException` with detailed error message and exit
+
+**Implementation requirement:**
+- Use `FileStream` + `StreamWriter` instead of `File.AppendAllText()`
+- Call `fileStream.Flush(true)` to ensure data reaches disk before position check
+- Exit program immediately on validation failure (fail-fast principle)
+
+**Performance impact:** Adds one `SetFilePointer()` OS call per flush cycle (~1-5 microseconds), negligible compared to network I/O
+
+**Rationale:** Silent truncation causes corrupt NDJSON output that breaks downstream consumers. Failing fast with clear error message is preferable to producing invalid data.
+
 ### 8.2 Concurrency Implementation
 
 - Event-driven I/O: one handler per connection, bidirectional forwarding
@@ -314,5 +334,22 @@ See [doc/DOUBLE_BUFFERING.md](doc/DOUBLE_BUFFERING.md) for complete architecture
 - Invalid arguments or bind failure: print error to stderr, exit 1
 - Connection errors: cleanup, log close event if connection was established
 - Output writes: all errors are reported (never ignored), program exits on write failure
+- **Write validation failures:** If bytes written ≠ bytes expected, print detailed error to stderr (expected vs actual byte counts, buffer size) and exit 1
 - Buffered output: on abrupt termination (kill -9, crash), up to 2 seconds of data in Input Buffer may be lost (bounded by swap interval)
+
+### 9.1 Write Validation Error Messages
+
+When write validation detects truncation, error message MUST include:
+- Expected byte count
+- Actual bytes written
+- Difference (data lost)
+- Context (network drive, buffer size)
+
+**Example:**
+```
+Output write failed: Write verification failed: expected 390904 bytes, wrote 63938 bytes.
+Data truncation detected on network drive. Buffer had 390904 chars.
+```
+
+This enables immediate diagnosis of network drive issues, file system problems, or disk space exhaustion.
 

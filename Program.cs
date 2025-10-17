@@ -459,7 +459,32 @@ class OutputWriter
             var content = buffer.ToString();
             if (_filePath != null)
             {
-                File.AppendAllText(_filePath, content);
+                // Use FileStream + StreamWriter with write validation
+                // to detect silent truncation on network drives (SPECIFICATION.md §8.1.1)
+                using (var fileStream = new FileStream(_filePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                using (var writer = new StreamWriter(fileStream, new UTF8Encoding(false)))
+                {
+                    // Record position before write
+                    long startPosition = fileStream.Position;
+
+                    // Write content
+                    writer.Write(content);
+                    writer.Flush();
+                    fileStream.Flush(true); // Flush to disk
+
+                    // Verify bytes written match expected
+                    long endPosition = fileStream.Position;
+                    long bytesWritten = endPosition - startPosition;
+                    long expectedBytes = Encoding.UTF8.GetByteCount(content);
+
+                    if (bytesWritten != expectedBytes)
+                    {
+                        throw new IOException(
+                            $"Write verification failed: expected {expectedBytes} bytes, " +
+                            $"wrote {bytesWritten} bytes. Data truncation detected on network drive. " +
+                            $"Buffer had {content.Length} chars.");
+                    }
+                }
             }
             else
             {

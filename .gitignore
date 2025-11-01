@@ -1,0 +1,53 @@
+# Generated directories (produced by the-system scripts)
+/reqs/
+/tests/
+/code/
+/release/
+/report/
+
+# Temporary files
+/tmp/
+
+# Old structure (pre-redesign)
+/rawprox_tests/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# .NET
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.user
+*.suo
+*.userprefs
+.vs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# System files
+Thumbs.db
+Desktop.ini

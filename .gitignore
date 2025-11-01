@@ -2,7 +2,6 @@
 /reqs/
 /tests/
 /code/
-/release/
 /report/
 
 # Temporary files
@@ -40,6 +39,7 @@ obj/
 # IDEs
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
@@ -47,7 +47,14 @@ obj/
 
 # Logs
 *.log
+*.tmp
+*.bak
 
 # System files
 Thumbs.db
 Desktop.ini
+
+# Project-specific files
+CLAUDE.md
+
+# Note: ./release/ is NOT ignored -- we keep build artifacts in the repository

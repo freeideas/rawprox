@@ -25,24 +25,25 @@ os.chdir(project_root)
 sys.path.insert(0, str(script_dir))
 from prompt_agentic_coder import run_prompt
 
-def timestamp():
-    """Get current timestamp string."""
-    return datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+def run_fix_unique_ids():
+    """Run fix-unique-req-ids.py to auto-fix duplicate IDs."""
+    print("\n" + "=" * 60)
+    print("PRE-CHECK: FIXING DUPLICATE REQ IDs")
+    print("=" * 60 + "\n")
 
-def write_report(report_type, content, extra_info=None):
-    """Write a report file and return the path."""
-    ts = timestamp()
-    report_path = Path(f"./reports/{ts}_{report_type}.md")
+    cmd = ['uv', 'run', '--script', './the-system/scripts/fix-unique-req-ids.py']
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=60)
 
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(f"# {report_type.replace('_', ' ').title()} Report\n\n")
-        f.write(f"**Timestamp:** {ts}\n\n")
-        if extra_info:
-            f.write(f"{extra_info}\n\n")
-        f.write("---\n\n")
-        f.write(content)
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
 
-    return report_path
+    if result.returncode != 0:
+        print("\n" + "=" * 60)
+        print("EXIT: fix-unique-req-ids.py FAILED")
+        print("=" * 60)
+        print(f"\nERROR: fix-unique-req-ids.py failed with exit code {result.returncode}\n")
+        sys.exit(1)
 
 def run_build_req_index():
     """Run build-req-index.py to rebuild the requirements database."""
@@ -92,25 +93,17 @@ def handle_missing_build_script():
     prompt = "Please follow these instructions: @./the-system/prompts/BUILD_SCRIPT.md"
 
     print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt)
-    print(f"← Command finished")
-
-    # Write report
-    report_content = "## Prompt\n\n```\n" + prompt[:500] + ("..." if len(prompt) > 500 else "") + "\n```\n\n"
-    report_content += "## Result\n\n```\n" + result + "\n```\n\n"
-
-    report_path = write_report("missing_build_script", report_content)
-    print(f"✓ Report written: {report_path}\n")
+    result = run_prompt(prompt, report_type="missing_build_script")
+    print(f"← Command finished\n")
 
     # Check if AI indicated insufficient README info
     if "INSUFFICIENT_BUILD_INFO" in result:
         print("\n" + "=" * 60)
         print("EXIT: README.md LACKS BUILD INFORMATION")
         print("=" * 60)
-        print("\nThe README.md does not contain enough information to create build.py")
-        print(f"Report: {report_path}\n")
+        print("\nThe README.md does not contain enough information to create build.py\n")
         print("ACTION REQUIRED:")
-        print("1. Read the report to see what information is missing")
+        print("1. Read the latest report in ./reports/ to see what information is missing")
         print("2. Update README.md with the required build details")
         print("3. Re-run this script\n")
         sys.exit(2)
@@ -121,7 +114,7 @@ def handle_missing_build_script():
         print("EXIT: build.py NOT CREATED")
         print("=" * 60)
         print("\nERROR: ./tests/build.py was not created")
-        print(f"See report: {report_path}\n")
+        print("See latest report in ./reports/\n")
         sys.exit(1)
 
     print("✓ Created ./tests/build.py\n")
@@ -159,16 +152,8 @@ def handle_orphan_req_ids(orphans):
     prompt = f"Please follow these instructions: @./the-system/prompts/REMOVE_ORPHAN_REQS.md\n\nOrphan $REQ_IDs to remove:\n{orphan_text}"
 
     print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt)
-    print(f"← Command finished")
-
-    # Write report
-    report_content = f"**Orphans found:** {len(orphans)}\n\n"
-    report_content += "## Orphan $REQ_IDs\n\n```\n" + orphan_text + "\n```\n\n"
-    report_content += "## Result\n\n```\n" + result + "\n```\n\n"
-
-    report_path = write_report("orphan_req_id", report_content)
-    print(f"✓ Report written: {report_path}\n")
+    result = run_prompt(prompt, report_type="orphan_req_id")
+    print(f"← Command finished\n")
 
     print(f"✓ Removed {len(orphans)} orphan $REQ_IDs\n")
     return True  # work was done
@@ -208,16 +193,8 @@ def handle_untested_req(untested):
     prompt += f"  Requirement text: {req_text}\n"
 
     print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt)
-    print(f"← Command finished")
-
-    # Write report
-    report_content = f"**$REQ_ID:** {req_id}\n"
-    report_content += f"**Flow file:** {flow_file}\n\n"
-    report_content += "## Result\n\n```\n" + result + "\n```\n\n"
-
-    report_path = write_report("untested_req", report_content)
-    print(f"✓ Report written: {report_path}\n")
+    result = run_prompt(prompt, report_type="untested_req")
+    print(f"← Command finished\n")
 
     print(f"✓ Created test for {req_id}\n")
     return True  # work was done
@@ -232,15 +209,8 @@ def handle_test_ordering():
     prompt = "Please follow these instructions: @./the-system/prompts/ORDER_TESTS.md"
 
     print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt)
-    print(f"← Command finished")
-
-    # Write report
-    report_content = "## Prompt\n\n```\n" + prompt + "\n```\n\n"
-    report_content += "## Result\n\n```\n" + result + "\n```\n\n"
-
-    report_path = write_report("order_tests", report_content)
-    print(f"✓ Report written: {report_path}\n")
+    result = run_prompt(prompt, report_type="order_tests")
+    print(f"← Command finished\n")
 
     print("✓ Tests analyzed and ordered\n")
 
@@ -332,21 +302,13 @@ def handle_single_test_until_passes(test_file):
 
         # Build prompt with test failure context
         prompt = f"Please follow these instructions: @./the-system/prompts/FIX_FAILING_TEST.md\n\n"
-        prompt += f"Failing test: {test_file}\n\n"
+        prompt += f"Failing test: {test_file}\n"
+        prompt += f"Attempt: {attempt}/{max_attempts}\n\n"
         prompt += f"Test output:\n```\n{test_output}\n```\n"
 
         print(f"→ Running: prompt_agentic_coder.run_prompt()")
-        result = run_prompt(prompt)
-        print(f"← Command finished")
-
-        # Write report
-        report_content = f"**Test file:** {test_file}\n"
-        report_content += f"**Attempt:** {attempt}/{max_attempts}\n\n"
-        report_content += "## Test Output (before fix)\n\n```\n" + test_output + "\n```\n\n"
-        report_content += "## Result\n\n```\n" + result + "\n```\n\n"
-
-        report_path = write_report("failing_test", report_content)
-        print(f"✓ Report written: {report_path}\n")
+        result = run_prompt(prompt, report_type="failing_test")
+        print(f"← Command finished\n")
 
         # Rebuild requirements index after AI made changes
         run_build_req_index()
@@ -386,10 +348,13 @@ def main():
     if not os.path.exists('./tests/build.py'):
         handle_missing_build_script()
 
-    # Step 2: Build requirements index
+    # Step 2: Fix any duplicate req_ids before building index
+    run_fix_unique_ids()
+
+    # Step 3: Build requirements index
     run_build_req_index()
 
-    # Step 3: Remove orphan req_ids
+    # Step 4: Remove orphan req_ids
     orphans = query_db("""
         SELECT DISTINCT req_id FROM req_locations
         WHERE category IN ('tests', 'code')
@@ -399,7 +364,7 @@ def main():
         handle_orphan_req_ids(orphans)
         run_build_req_index()  # Rebuild after cleanup
 
-    # Step 4: Write tests for all untested requirements
+    # Step 5: Write tests for all untested requirements
     tests_were_written = False
     while True:
         untested = query_db("""
@@ -412,7 +377,7 @@ def main():
         run_build_req_index()  # Rebuild after writing tests
         tests_were_written = True
 
-    # Step 5: Order tests by dependency (only if new tests were written)
+    # Step 6: Order tests by dependency (only if new tests were written)
     if tests_were_written:
         handle_test_ordering()
 
@@ -426,6 +391,7 @@ def main():
     # ========================================================================
 
     max_iterations = 5
+    previous_iteration_had_failures = None  # Track if we need final validation
 
     for iteration in range(1, max_iterations + 1):
         print("\n" + "=" * 60)
@@ -443,32 +409,50 @@ def main():
         failing_tests.sort()
 
         if not failing_tests:
-            print("All tests already in passing directory.\n")
-            print("=" * 60)
-            print("✓ SOFTWARE CONSTRUCTION COMPLETE")
-            print("=" * 60)
-            print(f"\nAll requirements have been implemented and tested!")
-            print(f"Total iterations: {iteration}\n")
+            # No tests in failing directory
+            if previous_iteration_had_failures is False:
+                # Previous iteration had no failures, so we just completed final validation successfully
+                print("Final validation complete -- all tests passed on first try!\n")
+                print("=" * 60)
+                print("✓ SOFTWARE CONSTRUCTION COMPLETE")
+                print("=" * 60)
+                print(f"\nAll requirements have been implemented and tested!")
+                print(f"Total iterations: {iteration}\n")
 
-            # Print summary
-            conn = sqlite3.connect('./tmp/reqs.sqlite')
-            cursor = conn.cursor()
-            cursor.execute('SELECT COUNT(DISTINCT req_id) FROM req_definitions')
-            total_reqs = cursor.fetchone()[0]
-            conn.close()
+                # Print summary
+                conn = sqlite3.connect('./tmp/reqs.sqlite')
+                cursor = conn.cursor()
+                cursor.execute('SELECT COUNT(DISTINCT req_id) FROM req_definitions')
+                total_reqs = cursor.fetchone()[0]
+                conn.close()
 
-            passing_tests = len([f for f in os.listdir('./tests/passing') if f.startswith('test_') or f.startswith('_test_')])
+                passing_tests = len([f for f in os.listdir('./tests/passing') if f.startswith('test_') or f.startswith('_test_')])
 
-            print(f"Summary:")
-            print(f"  Requirements implemented: {total_reqs}")
-            print(f"  Tests passing: {passing_tests}")
-            print(f"  Build artifacts: ./release/\n")
+                print(f"Summary:")
+                print(f"  Requirements implemented: {total_reqs}")
+                print(f"  Tests passing: {passing_tests}")
+                print(f"  Build artifacts: ./release/\n")
 
-            print("=" * 60)
-            print("EXIT: SUCCESS")
-            print("=" * 60)
-            print("\nAll requirements implemented and all tests passing.\n")
-            sys.exit(0)
+                print("=" * 60)
+                print("EXIT: SUCCESS")
+                print("=" * 60)
+                print("\nAll requirements implemented and all tests passing.\n")
+                sys.exit(0)
+            else:
+                # Need to run final validation -- move all passing tests to failing
+                print("No failing tests. Moving all passing tests to failing/ for final validation...\n")
+
+                if os.path.exists('./tests/passing'):
+                    for filename in os.listdir('./tests/passing'):
+                        if (filename.startswith('test_') or filename.startswith('_test_')) and filename.endswith('.py'):
+                            src = os.path.join('./tests/passing', filename)
+                            dst = os.path.join('./tests/failing', filename)
+                            os.rename(src, dst)
+                            print(f"  Moved: {filename}")
+
+                print(f"\nContinuing to iteration {iteration + 1} for final validation...\n")
+                previous_iteration_had_failures = None  # Reset for validation run
+                continue
 
         print(f"Processing {len(failing_tests)} test(s) in this iteration\n")
 
@@ -486,50 +470,21 @@ def main():
             if test_had_failure:
                 any_failures = True
 
-        # After all tests processed, check if any had failures
+        # After all tests processed, set flag for next iteration
+        previous_iteration_had_failures = any_failures
+
         if any_failures:
             print("\n" + "=" * 60)
-            print("ITERATION COMPLETE - FAILURES OCCURRED")
+            print("ITERATION COMPLETE -- SOME TESTS REQUIRED FIXES")
             print("=" * 60)
-            print("\nSome tests required fixes. Moving all tests back to failing/")
-            print("for next iteration to verify no regressions...\n")
-
-            # Move all passing tests back to failing
-            if os.path.exists('./tests/passing'):
-                for filename in os.listdir('./tests/passing'):
-                    if (filename.startswith('test_') or filename.startswith('_test_')) and filename.endswith('.py'):
-                        src = os.path.join('./tests/passing', filename)
-                        dst = os.path.join('./tests/failing', filename)
-                        os.rename(src, dst)
-                        print(f"  Moved: {filename}")
-
-            print(f"\nContinuing to iteration {iteration + 1}...\n")
+            print("\nSome tests required fixes during this iteration.")
+            print(f"Continuing to iteration {iteration + 1}...\n")
         else:
-            # No failures - all tests passed on first try!
             print("\n" + "=" * 60)
-            print("✓ ITERATION COMPLETE - NO FAILURES")
+            print("✓ ITERATION COMPLETE -- ALL TESTS PASSED ON FIRST TRY")
             print("=" * 60)
-            print("\nAll tests passed on first try! Software construction complete.\n")
-
-            # Print summary
-            conn = sqlite3.connect('./tmp/reqs.sqlite')
-            cursor = conn.cursor()
-            cursor.execute('SELECT COUNT(DISTINCT req_id) FROM req_definitions')
-            total_reqs = cursor.fetchone()[0]
-            conn.close()
-
-            passing_tests = len([f for f in os.listdir('./tests/passing') if f.startswith('test_') or f.startswith('_test_')])
-
-            print(f"Summary:")
-            print(f"  Requirements implemented: {total_reqs}")
-            print(f"  Tests passing: {passing_tests}")
-            print(f"  Build artifacts: ./release/\n")
-
-            print("=" * 60)
-            print("EXIT: SUCCESS")
-            print("=" * 60)
-            print("\nAll requirements implemented and all tests passing.\n")
-            sys.exit(0)
+            print("\nAll tests in this iteration passed on first try (no code changes).")
+            print(f"Continuing to iteration {iteration + 1}...\n")
 
     # If we get here, we've exceeded max iterations
     print("\n" + "=" * 60)

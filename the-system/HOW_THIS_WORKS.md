@@ -1,97 +1,100 @@
 # How This Works
 
-Transform use-case README documents into working, tested software.
+Transform use-case README documents into working, tested software through two AI-driven phases.
 
 ---
 
 ## Overview
 
-**Human writes** use-case documentation → **AI generates** testable flows → **Human reviews** flows → **AI implements** code and tests until complete.
+This system automates software construction through two distinct phases:
 
-**Human runs two Python scripts:**
+1. **Requirements Generation** -- Human writes/revises README docs → AI generates testable flows → Human reviews → Iterate until flows are correct
+2. **Software Construction** -- AI writes tests and code → Runs tests → Fixes failures → Repeats until all tests pass
 
-1. `./the-system/scripts/reqs-gen.py` -- Invokes AI to generate flows from documentation
-2. `./the-system/scripts/software-construction.py` -- Invokes AI to build software from flows
+**Key principle:** Human provides oversight at both phases. Any change to README documentation requires re-running the requirements generation phase.
 
-These scripts keep the AI context window laser-focused on one task at a time and iterate automatically until completion.
+---
 
-**Prerequisites: The task watcher must be running:**
+## Prerequisites
+
+**Task watcher must be running:**
 
 ```bash
 uv run --script ./the-system/scripts/task_watcher.py
 ```
 
-Leave this running in a separate terminal. It processes the work queue that the scripts below create.
+Leave this running in a separate terminal. All AI invocations are processed through this work queue system.
 
 ---
 
-## Phase 1: Human Writes Documentation
+## Phase 1: Requirements Generation
 
-**Human creates:**
+### Human Writes Documentation
 
-1. **README.md** -- Project overview, what the software does
-2. **./readme/*.md files** -- Use-case oriented documentation
+Create use-case oriented documentation:
 
-### Examples of Use-Case Files
+1. **README.md** -- Project overview, what the software does, what goes in `./release/`
+2. **./readme/*.md** -- One file per use case, user perspective, or workflow
+
+**Examples:**
 
 **Web server:**
-- `README.md` -- Normal overview similar to most README files
-- `./readme/LIFECYCLE.md` -- Start, stop, environment needs
-- `./readme/DEVELOPER.md` -- Serving HTML and APIs
-- `./readme/CLIENT.md` -- Browser and curl usage
+- `README.md` -- Overview
+- `./readme/LIFECYCLE.md` -- Start, stop, environment
+- `./readme/API.md` -- Endpoints and responses
 - `./readme/DEPLOYMENT.md` -- Production deployment
 
 **CLI tool:**
-- `README.md` -- Normal overview similar to most README files
+- `README.md` -- Overview
 - `./readme/INSTALLATION.md` -- Installation process
 - `./readme/BASIC_USAGE.md` -- Common workflows
 - `./readme/ADVANCED.md` -- Power user features
 
-**Principle:** Each file tells a story from someone's perspective (user, developer, operator, etc.).
+**Principle:** Each file tells a story from someone's perspective (user, developer, operator).
 
----
+### AI Generates Flows
 
-## Phase 2: AI Generates Flows
+**Run:** `uv run --script ./the-system/scripts/reqs-gen.py`
 
-**Human runs:** `uv run --script ./the-system/scripts/reqs-gen.py`
+The script:
+1. Reads all README documentation
+2. Generates testable requirement flows in `./reqs/`
+3. Validates flows for completeness, testability, and consistency
+4. Iterates automatically until flows pass validation
 
-The script prompts AI to write requirements, tests them, and iterates until flows pass validation.
+**Possible outcomes:**
+- **Success** -- Flows are valid, ready for Phase 2
+- **Auto-iteration** -- Script detects fixable issues and corrects them automatically
+- **README issues** -- Script exits, requesting human to clarify README and re-run
 
-**Three possible outcomes:**
-1. **GOODENUF** -- Flows are valid, proceed to Phase 3
-2. **NEEDIMPROV** -- Script loops to revise flows automatically
-3. **READMEBUG** -- Script exits, requesting human to improve README documentation and re-run
-
-**Note:** The script often identifies issues where README documentation states constraints without specifying testable behavior (e.g., "port number is required" without saying what happens when missing). When this occurs, revise the README files to be more specific about observable behavior, then re-run the script.
-
-**AI processes** each README file into testable flows in `./reqs/`.
+**Common README issue:** Stating constraints without specifying observable behavior. For example, "port number is required" without saying what happens when missing (error message? default value? crash?).
 
 ### What Is a Flow?
 
 A flow is a **sequence of steps from application start to shutdown** that can be tested end-to-end.
 
-**Example:**
-
-`./readme/LIFECYCLE.md` generates:
+**Example:** `./readme/LIFECYCLE.md` generates:
 - `./reqs/install.md` -- Install to ready state
 - `./reqs/startup-to-shutdown.md` -- Start server, use it, stop it
 - `./reqs/uninstall.md` -- Remove from system
 
 ### Flow Format
 
+Each flow breaks into testable steps identified by unique `$REQ_ID` tags:
+
 ```markdown
 # Server Startup Flow
 
 **Source:** ./readme/LIFECYCLE.md
 
-This flow runs from app start to shutdown.
+Start server, verify ready, shut down cleanly.
 
 ## $REQ_STARTUP_001: Launch Process
 **Source:** ./readme/LIFECYCLE.md (Section: "Starting the Server")
 
 Start the server executable with default configuration.
 
-## $REQ_STARTUP_002: Listen on Port
+## $REQ_STARTUP_002: Bind to Port
 **Source:** ./readme/LIFECYCLE.md (Section: "Network Binding")
 
 Server must bind to configured port.
@@ -101,87 +104,93 @@ Server must bind to configured port.
 
 Server must log when ready to accept connections.
 
-## $REQ_STARTUP_004: Health Check Response
-**Source:** ./readme/LIFECYCLE.md (Section: "Health Monitoring")
+## $REQ_STARTUP_004: Shutdown Cleanly
+**Source:** ./readme/LIFECYCLE.md (Section: "Stopping")
 
-GET /health must return 200 OK.
+Server must exit gracefully when receiving SIGTERM.
 ```
 
-### Flow Requirements
+**Flow requirements:**
+- Descriptive title
+- Source attribution to README
+- Testable steps with unique `$REQ_ID` tags
+- Format: `$REQ_` followed by letters/digits/underscores/hyphens (e.g., `$REQ_STARTUP_001`)
+- Each step cites source: `**Source:** ./readme/FILE.md (Section: "Name")`
 
-**Each flow:**
-- Has descriptive title
-- References source README with `**Source:** ./readme/FILENAME.md (Section)`
-- Describes what the flow covers (start to end scenario)
-- Breaks into steps, each with unique `$REQ_ID`
-- Uses descriptive `$REQ_ID` names (e.g., `$REQ_STARTUP_001` not `$REQ_001`)
+### Human Reviews and Iterates
 
-**Each step:**
-- Has unique `$REQ_ID` starting with `$REQ_` followed by letters, digits, underscores, or hyphens (e.g., `$REQ_STARTUP_001`, `$REQ_X`, `$REQ_foo-bar_123`)
-- Includes source attribution: `**Source:** ./readme/FILE.md (Section: "Section Name")`
-- Is testable (observable, verifiable)
-- Follows sequence from start to shutdown
-- Is clear and specific without over-specifying
+1. Read generated flows in `./reqs/`
+2. Verify they match your intent
+3. **If changes needed:** Revise `./readme/` documentation and re-run `reqs-gen.py`
+4. Repeat until flows correctly capture all use cases
 
----
-
-## Phase 3: Human Reviews and Iterates
-
-**Human:**
-
-1. **Reads generated flows** in `./reqs/`
-2. **Checks if they match intent** -- Do they capture all use cases correctly?
-3. **If needed, adjusts `./readme/` documentation** to clarify or add details
-4. **Re-runs `reqs-gen.py`** to regenerate flows
-5. **Repeats until flows are correct**
-
-**The flows in `./reqs/` are what will be tested and implemented, so they must be right.**
+**The flows in `./reqs/` are what will be implemented and tested, so they must be right before proceeding to Phase 2.**
 
 ---
 
-## Phase 4: AI Builds the Software
+## Phase 2: Software Construction
 
-**Human runs:** `uv run --script ./the-system/scripts/software-construction.py`
+### AI Builds the Software
 
-The script iterates through writing/revising tests, writing code, and running tests until all tests pass.
+**Run:** `uv run --script ./the-system/scripts/software-construction.py`
 
-**AI operates** the work queue until all tests pass.
+The script automates the build/test/fix cycle:
 
-### How It Works
+**Setup phase (runs once):**
+1. Creates `./tests/build.py` (compiles/packages code)
+2. Removes orphan `$REQ_ID` tags from old code
+3. Writes tests for all requirements (one flow = one test file)
+4. Orders tests from foundational to advanced (numeric prefixes)
 
-The `software-construction.py` script:
+**Iteration phase (repeats until done):**
+1. Runs all tests in order
+2. For each failure, AI fixes code and re-runs
+3. When all tests pass individually, re-runs entire suite to check for regressions
+4. Done when all tests pass with no changes needed
 
-1. Creates `./tests/build.py` if missing
-2. Removes orphan `$REQ_ID` tags
-3. Writes tests for all untested requirements
-4. Orders tests from general/foundational to specific/advanced using numeric prefixes
-5. Runs tests in order and fixes code until all tests pass with no changes needed
+**Note:** The system uses multiple iterations because fixing one test can break another. Tests are moved back to `./tests/failing/` after any failure to ensure nothing regresses.
 
-**Note:** Duplicate `$REQ_ID` tags are automatically fixed by `reqs-gen.py`.
-
-**Test ordering:**
-Tests are kept ordered from most general to most specific using numeric prefixes (00, 01, 02, etc.). This ensures foundational tests (build, startup) pass before feature tests run.
+### Test Structure
 
 **One flow = One test file:**
 ```
 ./reqs/startup.md → ./tests/test_01_startup.py
+./reqs/api.md → ./tests/test_02_api.py
 ```
 
-Tests execute the flow from start to shutdown, verify each `$REQ_ID` step with assertions, and tag each assertion with `# $REQ_ID` for traceability.
+**Test ordering:** Numeric prefixes ensure tests run from general to specific:
+- `00-XX`: Build/installation
+- `01-XX`: Startup/lifecycle
+- `02-XX`: Core functionality
+- `03-XX`: Advanced features
+
+**Test implementation:**
+- Standalone Python scripts (not pytest)
+- Execute complete flow from start to shutdown
+- Tag each assertion with `# $REQ_ID` for traceability
+- Clean up in `finally` block (no leaked processes/resources)
+
+### Human Monitors Progress
+
+Watch `./reports/` for AI activity. If you see issues or want to change requirements:
+1. Stop construction (Ctrl+C)
+2. Revise `./readme/` documentation
+3. Re-run `reqs-gen.py` to regenerate flows
+4. Re-run `software-construction.py` to rebuild
 
 ---
 
-## Test Execution
+## Running Tests Manually
 
 **Run tests with:**
 ```bash
-uv run --script ./the-system/scripts/test.py              # Run failing tests by default
-uv run --script ./the-system/scripts/test.py --failing    # Explicit failing tests
-uv run --script ./the-system/scripts/test.py --passing    # Run passing tests
+uv run --script ./the-system/scripts/test.py              # Failing tests (default)
+uv run --script ./the-system/scripts/test.py --passing    # Passing tests
+uv run --script ./the-system/scripts/test.py <file>       # Specific test
 ```
 
-**Test script:**
-1. Runs `./tests/build.py` first (compiles/packages code)
+The test script:
+1. Runs `./tests/build.py` first (compiles code)
 2. Runs specified tests
 3. Shows results
 
@@ -189,7 +198,7 @@ uv run --script ./the-system/scripts/test.py --passing    # Run passing tests
 
 ## Traceability
 
-**All `$REQ_ID` tags are indexed** to track:
+All `$REQ_ID` tags are indexed in a SQLite database (`./tmp/reqs.sqlite`). This tracks:
 - **What** -- Requirement text
 - **Why** -- Source README reference
 - **Test** -- Which test verifies it
@@ -202,10 +211,10 @@ uv run --script ./the-system/scripts/reqtrace.py $REQ_STARTUP_002
 
 **Output:**
 ```
-$REQ_STARTUP_002: Listen on Port
-Source: ./readme/LIFECYCLE.md
+$REQ_STARTUP_002: Bind to Port
+Source: ./readme/LIFECYCLE.md (Section: "Network Binding")
 Flow: ./reqs/startup.md
-Test: ./tests/passing/test_startup.py:42
+Test: ./tests/passing/test_01_startup.py:42
 Code: ./code/server.cs:156, ./code/network.cs:89
 ```
 
@@ -215,55 +224,60 @@ Code: ./code/server.cs:156, ./code/network.cs:89
 
 ```
 ./readme/                       Use-case documentation (human writes)
-./reqs/                         Flows (AI generates from readme)
+./reqs/                         Testable flows (AI generates)
 ./tests/
   build.py                      Build script (AI creates)
-  failing/                      Tests not passing yet (AI works here)
-  passing/                      All tests passing (AI moves tests here)
+  failing/                      Tests not passing yet
+  passing/                      Tests that pass
 ./code/                         Implementation (AI writes)
 ./release/                      Build outputs (from build.py)
+./reports/                      AI activity reports (timestamped)
+./tmp/                          Requirements database
+./workQ/                        Task queue for AI invocations
 ./the-system/
-  scripts/                      System automation scripts
+  scripts/
     reqs-gen.py                 Generate flows from READMEs
-    fix-unique-req-ids.py       Auto-fix duplicate REQ_IDs
-    build-req-index.py          Build requirements database index
-    prompt_agentic_coder.py     Wrapper for AI agent (edit to swap agents)
-    software-construction.py    Build software from flows (includes work queue)
+    software-construction.py    Build software from flows
+    task_watcher.py             Process work queue tasks
+    prompt_agentic_coder.py     Wrapper for AI agent
     test.py                     Run tests with build step
-    reqtrace.py                 Trace requirements to code/tests
-  prompts/                      AI prompts used by scripts
+    reqtrace.py                 Trace requirements to tests/code
+    build-req-index.py          Build traceability database
+    fix-unique-req-ids.py       Auto-fix duplicate $REQ_IDs
+  prompts/
     WRITE_REQS.md               Flow generation instructions
-    check_req-contradictions.md Check for contradictory requirements
-    check_req-testability.md    Check for untestable constraints
-    check_req-coverage.md       Check for complete coverage
-    check_req-overspec.md       Check for over-specification
-    check_req-sources.md        Check for source attribution
-    check_req-flow-structure.md Check for proper flow structure
-    WORK_QUEUE.md               Construction instructions
+    req-fix_*.md                Validation and fix prompts
+    BUILD_SCRIPT.md             Build script creation
+    WRITE_TEST.md               Test writing instructions
+    FIX_FAILING_TEST.md         Test failure fixing
+    ORDER_TESTS.md              Test ordering by dependency
+    REMOVE_ORPHAN_REQS.md       Orphan tag cleanup
     PHILOSOPHY.md               Project philosophy
 ```
 
 ---
 
-## Benefits
-
-- **Clear division** -- Human writes use cases, AI does implementation
-- **Iterative** -- Human reviews flows before implementation starts
-- **Traceable** -- Every requirement links to test and code
-- **Testable** -- Flows are executable, not abstract
-- **Flexible** -- Code can be refactored freely while tests pass
-- **Use-case driven** -- Organized how users think
-- **Automated workflow** -- Scripts manage AI context and iteration
-- **Small context windows** -- Each AI invocation focuses on one task, avoiding brain-fog
-
----
-
 ## Key Principles
 
-- **One flow = One test file**
-- **Tests ordered general to specific** -- numeric prefixes ensure proper execution order
-- **Code is flexible** -- refactor freely while tests pass
+- **Two phases, both with human oversight** -- Requirements generation and software construction
+- **One flow = One test file** -- Complete use-case scenarios
+- **Tests ordered general to specific** -- Foundational before advanced
+- **Code is flexible** -- Refactor freely while tests pass
 - **All `$REQ_ID` tags must be unique** across all flows
 - **Every `$REQ_ID` must have a test** that verifies it
 - **Software is done when** all tests pass with no changes needed
-- **Scripts drive AI** -- keeping context focused and iterating automatically
+- **Any README change requires** re-running `reqs-gen.py`
+- **Performance/load testing is out of scope** -- Test functional capabilities (e.g., "handles multiple connections"), not performance characteristics (e.g., "handles 10,000 connections per second"). Specific throughput, latency, and scale requirements may be documented but won't have automated tests.
+
+---
+
+## Benefits
+
+- **Clear separation** -- Human defines what, AI implements how
+- **Iterative with oversight** -- Human reviews flows before implementation
+- **Fully traceable** -- Every requirement links to source, test, and code
+- **Testable by design** -- Flows are executable scenarios, not abstract documents
+- **Flexible implementation** -- Code can be refactored freely while tests pass
+- **Use-case driven** -- Organized how users think, not how code is structured
+- **Small AI context windows** -- Each invocation focuses on one task, avoiding brain-fog
+- **Automated iteration** -- Scripts manage AI context and loop until done

@@ -21,7 +21,7 @@ if sys.stdout.encoding != 'utf-8':
 processing = set()
 processing_lock = threading.Lock()
 
-def worker_thread(watch_dir, base_name, pending_path):
+def worker_thread(watch_dir, base_name, pending_path, original_filepath_str):
     """Worker thread that processes a single task"""
     working_filename = f"0XW_{base_name}.md"
     working_path = watch_dir / working_filename
@@ -132,12 +132,26 @@ def worker_thread(watch_dir, base_name, pending_path):
         except:
             pass
 
+        # Check if output is empty -- if so, re-queue the task
+        if not combined_output or not combined_output.strip():
+            print(f"[{base_name}] Empty output detected, re-queueing task...", flush=True)
+
+            # Rename 0XW_foo.md back to T45K_foo.md for retry
+            if working_path.exists():
+                task_path = watch_dir / f"T45K_{base_name}.md"
+                working_path.rename(task_path)
+                print(f"[{base_name}] Restored {working_filename} -> {task_path.name} for retry", flush=True)
+            else:
+                print(f"[{base_name}] Warning: {working_filename} not found, cannot re-queue", flush=True)
+
+            print(f"[{base_name}] Thread exiting\n", flush=True)
+            return
+
         # Write to report
-        if combined_output:
-            # Filter out lines containing .claude.json errors
-            combined_output = re.sub(r'.*\.claude\.json\b.*?\n', '', combined_output, flags=re.DOTALL)
-            print(f"[{base_name}] Writing report to: {report_filename}", flush=True)
-            report_path.write_text(combined_output, encoding='utf-8')
+        # Filter out lines containing .claude.json errors
+        combined_output = re.sub(r'.*\.claude\.json\b.*?\n', '', combined_output, flags=re.DOTALL)
+        print(f"[{base_name}] Writing report to: {report_filename}", flush=True)
+        report_path.write_text(combined_output, encoding='utf-8')
 
         # Rename 0XW_foo.md to D0N3_foo.md
         if working_path.exists():
@@ -151,9 +165,9 @@ def worker_thread(watch_dir, base_name, pending_path):
     except Exception as e:
         print(f"[{base_name}] Error in worker thread: {e}\n", flush=True)
     finally:
-        # Remove from processing set when done
+        # Remove from processing set when done (using original T45K filepath)
         with processing_lock:
-            processing.discard(str(pending_path))
+            processing.discard(original_filepath_str)
 
 def process_task_file(watch_dir, filepath):
     """Process a T45K task file by renaming it and spawning a worker thread"""
@@ -176,10 +190,10 @@ def process_task_file(watch_dir, filepath):
         print(f"[*] Renaming to: {pending_filename}", flush=True)
         filepath.rename(pending_path)
 
-        # Spawn worker thread
+        # Spawn worker thread (pass original filepath string for cleanup)
         worker = threading.Thread(
             target=worker_thread,
-            args=(watch_dir, base_name, pending_path),
+            args=(watch_dir, base_name, pending_path, str(filepath)),
             daemon=True
         )
         worker.start()

@@ -4,7 +4,7 @@ Remove requirements that are natural consequences of other requirements or OS/la
 
 ---
 
-## THE SIX RULES FOR REQUIREMENTS
+## THE SEVEN RULES FOR REQUIREMENTS
 
 1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
@@ -12,6 +12,7 @@ Remove requirements that are natural consequences of other requirements or OS/la
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
 5. **Source Attribution** -- Every $REQ_ID cites: `**Source:** ./readme/FILE.md (Section: "Name")`
 6. **Unique IDs** -- Each $REQ_ID appears exactly once. Format: `$REQ_` followed by letters/digits/underscores/hyphens (e.g., $REQ_STARTUP_001)
+7. **Reasonably Testable** -- Requirements must have observable behavior that can be verified
 
 ---
 
@@ -59,6 +60,18 @@ README sections often explain **why** design decisions were made and what the tr
 - **Real requirement:** "Never slow down connections due to logging"
 - **Derivative (REMOVE):** "Even under stress leading to OOM, connections maintain full throughput until crash"
 - **Why derivative?** This just restates the first requirement with added consequence details
+
+### Category 5: Performance/Load Characteristics
+
+**Examples to REMOVE:**
+- "Handles 10,000 requests per second" (performance claims are hard to test reliably)
+- "Low latency response" (subjective and environment-dependent)
+- "Scales to high traffic" (load characteristics are difficult to verify consistently)
+- "Fast startup time" (speed is relative and hard to test)
+
+**Why remove?** Performance and load characteristics are difficult to test reliably and consistently.
+
+**Exception:** Keep architectural requirements that enable performance (e.g., "use non-blocking I/O", "buffer in memory").
 
 ---
 
@@ -110,8 +123,9 @@ README sections often explain **why** design decisions were made and what the tr
 1. Read `./README.md` and all files in `./readme/`
 2. Read all flow files in `./reqs/`
 3. Identify derivative requirements
-4. Remove them from flow files
-5. Ensure core requirements that cause the derivatives remain
+4. **Focus on significant issues** -- ignore minor redundancies; only remove clear derivative requirements
+5. Remove them from flow files
+6. Ensure core requirements that cause the derivatives remain
 
 **Be careful:** Sometimes README explanatory text helps clarify what the actual requirement is. Extract the requirement, discard the explanation.
 
@@ -119,9 +133,12 @@ README sections often explain **why** design decisions were made and what the tr
 
 ## Output Format
 
-Write a markdown analysis report with your full reasoning, findings, and thought process. If derivative requirements are found, list which ones were removed and why.
+**Do NOT create any report files.** Just respond with a simple list.
 
-**IMPORTANT:** The LAST LINE of your response must be the status word alone:
-- `GOODENUF` -- No derivative requirements found
-- `NEEDIMPROV` -- Found derivative requirements and removed them (AI edited ./reqs/)
-- `READMEBUG` -- README has unclear requirements that need human clarification
+**If significant issues found:** For each change, list:
+- File: (which file was edited)
+- Before: (the derivative requirement text, including $REQ_ID)
+- After: (deleted)
+- Why: (why this was derivative, which category)
+
+**If no significant issues found:** State that no significant derivative requirements were found.

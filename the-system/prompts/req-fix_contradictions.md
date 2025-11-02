@@ -4,7 +4,7 @@ Check if any requirements in `./reqs/` contradict each other.
 
 ---
 
-## THE SIX RULES FOR REQUIREMENTS
+## THE SEVEN RULES FOR REQUIREMENTS
 
 1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
@@ -12,6 +12,7 @@ Check if any requirements in `./reqs/` contradict each other.
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
 5. **Source Attribution** -- Every $REQ_ID cites: `**Source:** ./readme/FILE.md (Section: "Name")`
 6. **Unique IDs** -- Each $REQ_ID appears exactly once. Format: `$REQ_` followed by letters/digits/underscores/hyphens (e.g., $REQ_STARTUP_001)
+7. **Reasonably Testable** -- Requirements must have observable behavior that can be verified
 
 ---
 
@@ -44,47 +45,23 @@ Two or more requirements specify behavior that cannot all be true simultaneously
 2. Read all flow files in `./reqs/`
 3. Look for requirements that specify opposite or mutually exclusive behaviors
 4. Verify if apparent contradictions are actually different scenarios
-5. **Be conservative** -- only flag clear, unambiguous contradictions
+5. **Focus on significant issues** -- ignore minor inconsistencies; only flag clear, unambiguous contradictions
 
 ---
 
 ## Output Format
 
-Write a markdown analysis report with your full reasoning, findings, and thought process.
+**Do NOT create any report files.** Just respond with a simple list.
 
-**IMPORTANT:** The LAST LINE of your response must be the status word alone:
-- `GOODENUF` -- No contradictions found
-- `NEEDIMPROV` -- Found contradictions and fixed them (AI made changes to ./reqs/)
-- `READMEBUG` -- Found contradictions that require human to fix README documentation
+**If significant issues found:** For each change, list:
+- File: (which file was edited)
+- Before: (the contradicting text)
+- After: (the corrected text)
+- Why: (reason for the change)
 
-**Example outputs:**
+**If contradictions require README changes:**
+- Output exactly: `**README_CHANGES_REQUIRED: true**` on its own line
+- Explain what needs to be clarified in the README files
+- Do NOT attempt to fix unfixable contradictions in reqs files
 
-**No contradictions:**
-```
-Analyzed all requirements across all flow files. Checked for mutually exclusive behaviors and conflicting specifications. No contradictions found.
-
-GOODENUF
-```
-
-**Contradictions requiring README fix:**
-```
-# Contradiction Found
-
-**Requirements in conflict:**
-
-- **$REQ_STARTUP_003** in ./reqs/startup.md
-  - Source: ./readme/LIFECYCLE.md (Section: "Startup")
-  - Text: Must start immediately when launched
-
-- **$REQ_STARTUP_007** in ./reqs/startup.md
-  - Source: ./readme/LIFECYCLE.md (Section: "Configuration")
-  - Text: Must wait for user confirmation before starting
-
-**Why they contradict:**
-Cannot both start immediately and wait for confirmation.
-
-**Recommendation:**
-Revise README to clarify startup behavior.
-
-READMEBUG
-```
+**If no significant issues found:** State that no significant contradictions were found.

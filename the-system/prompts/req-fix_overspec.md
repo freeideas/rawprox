@@ -4,7 +4,7 @@ Ensure requirements in `./reqs/` match the specificity level of README documenta
 
 ---
 
-## THE SIX RULES FOR REQUIREMENTS
+## THE SEVEN RULES FOR REQUIREMENTS
 
 1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
@@ -12,6 +12,7 @@ Ensure requirements in `./reqs/` match the specificity level of README documenta
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
 5. **Source Attribution** -- Every $REQ_ID cites: `**Source:** ./readme/FILE.md (Section: "Name")`
 6. **Unique IDs** -- Each $REQ_ID appears exactly once. Format: `$REQ_` followed by letters/digits/underscores/hyphens (e.g., $REQ_STARTUP_001)
+7. **Reasonably Testable** -- Requirements must have observable behavior that can be verified
 
 ---
 
@@ -37,7 +38,8 @@ Requirements include details not specified in source READMEs.
 - Exact error message wording (unless specified)
 - Internal implementation (unless specified)
 - File formats, data structures (unless specified)
-- Performance numbers (unless specified)
+- Performance numbers (unless specified) -- these are also hard to test reliably
+- Speed/throughput claims (unless specified) -- difficult to verify consistently
 - Output streams (unless specified)
 - Specific exit codes (unless specified or logically necessary)
 
@@ -48,15 +50,19 @@ Requirements include details not specified in source READMEs.
 1. Read `./README.md` and all files in `./readme/`
 2. Read all flow files in `./reqs/`
 3. For each requirement, compare to README source
-4. **Fix by removing** details not in README (keep testable, remove excess)
+4. **Focus on significant over-specification** -- ignore minor detail additions; only fix requirements with substantial extra details
+5. **Fix by removing** details not in README (keep testable, remove excess)
 
 ---
 
 ## Output Format
 
-Write a markdown analysis report with your full reasoning, findings, and thought process. If issues are found, include which requirements were over-specified and how they were fixed.
+**Do NOT create any report files.** Just respond with a simple list.
 
-**IMPORTANT:** The LAST LINE of your response must be the status word alone:
-- `GOODENUF` -- No over-specification found, requirements match README detail level
-- `NEEDIMPROV` -- Found over-specified requirements and fixed them (AI simplified ./reqs/)
-- `READMEBUG` -- README documentation has unclear specifications needing clarification
+**If significant issues found:** For each change, list:
+- File: (which file was edited)
+- Before: (the over-specified requirement text)
+- After: (the corrected requirement text, matching README detail level)
+- Why: (what details were not in README)
+
+**If no significant issues found:** State that requirements match README detail level.

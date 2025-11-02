@@ -63,11 +63,13 @@ Examples:
 
 **Without any log destination:** Logs go to STDOUT only.
 
-**Without port rules and with --mcp:** RawProx shows usage message to STDERR and waits for MCP commands to add port rules.
+**Without port rules and with --mcp:** RawProx waits for MCP commands to add port rules.
 
-**Without port rules and without --mcp:** RawProx shows usage message to STDERR and exits.
+**Without port rules and without --mcp:** RawProx displays help text to STDERR and exits (no NDJSON output).
 
 **Invalid port rules:** If arguments don't parse as valid port rules or destinations, RawProx shows an error and exits.
+
+**Note:** When RawProx exits because it has nothing to do, it outputs only help text to STDERR, never NDJSON to STDOUT.
 
 ### Multiple Services
 
@@ -94,7 +96,13 @@ The binary is AOT-compiled using .NET 8 or above.
 
 ## Build Artifacts
 
-The `./release/` directory contains **only** `rawprox.exe`. No other files (no .pdb, no .dll, no config files) are included in the release build.
+After building, the `./release/` directory must contain **only** the single executable:
+- `rawprox.exe` -- Single AOT-compiled binary (no .pdb, .dll, or config files)
+
+The build process should:
+1. Compile as .NET Native AOT (single-file, no dependencies)
+2. Place only `rawprox.exe` in `./release/`
+3. Ensure no debug files (.pdb) or runtime files (.dll) are included
 
 ## Limitations
 
@@ -103,6 +111,7 @@ The `./release/` directory contains **only** `rawprox.exe`. No other files (no .
 
 ## Documentation
 
+- **[Help Text](./readme/HELP.md)** -- Complete usage and examples (shown when running with no arguments)
 - **[Log Format](./readme/LOG_FORMAT.md)** -- NDJSON event structure and parsing examples
 - **[MCP Server](./readme/MCP_SERVER.md)** -- JSON-RPC API for dynamic control (requires `--mcp` flag)
 - **[Performance](./readme/PERFORMANCE.md)** -- Memory buffering and I/O strategy

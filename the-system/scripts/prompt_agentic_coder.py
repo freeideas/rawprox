@@ -72,16 +72,17 @@ def get_compact_timestamp():
     # Take last 8 digits
     return base62_str[-8:].rjust(8, '0')
 
-def run_prompt(prompt_text, timeout=3600):
+def run_prompt(prompt_text, report_type, timeout=3600):
     """
     Submit a task to the workQ and wait for the result.
 
     Args:
         prompt_text: The prompt to send to the task watcher
+        report_type: Type of report for filename (e.g., "failing_test", "write_reqs")
         timeout: Maximum seconds to wait for result (default: 3600 = 1 hour)
 
     Returns:
-        String containing the report contents
+        String containing the AI response
     """
     # Handle @file references in the prompt
     import re
@@ -121,9 +122,41 @@ def run_prompt(prompt_text, timeout=3600):
     while True:
         if report_file.exists():
             # Report file appeared, read it
-            result = report_file.read_text(encoding='utf-8')
-            print(f"DEBUG [prompt_agentic_coder]: Report received ({len(result)} chars)", file=sys.stderr, flush=True)
-            return result
+            ai_response = report_file.read_text(encoding='utf-8')
+            print(f"DEBUG [prompt_agentic_coder]: Report received ({len(ai_response)} chars)", file=sys.stderr, flush=True)
+
+            # Write structured report to ./reports/
+            from datetime import datetime
+            from pathlib import Path
+
+            timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            reports_dir = Path("./reports")
+            reports_dir.mkdir(exist_ok=True)
+
+            final_report_path = reports_dir / f"{timestamp}_{report_type}.md"
+
+            # Format report with prompt and response
+            report_title = report_type.replace('_', ' ').title()
+            structured_report = f"""# {report_title}
+**Timestamp:** {timestamp}
+
+---
+
+## Prompt
+
+{prompt_text}
+
+---
+
+## Response
+
+{ai_response}
+"""
+
+            final_report_path.write_text(structured_report, encoding='utf-8')
+            print(f"DEBUG [prompt_agentic_coder]: Wrote report to {final_report_path}", file=sys.stderr, flush=True)
+
+            return ai_response
 
         # Check timeout
         elapsed = time.time() - start_time
@@ -139,7 +172,7 @@ def test_worker(task_name, prompt, expected_answer, results):
     """Worker thread for test mode"""
     try:
         print(f"[TEST] {task_name}: Submitting prompt...", file=sys.stderr, flush=True)
-        result = run_prompt(prompt)
+        result = run_prompt(prompt, report_type=f"test_{task_name}")
 
         # Check if expected answer is in the result
         if str(expected_answer) in result:
@@ -215,7 +248,7 @@ def main():
 
     # Execute via workQ
     try:
-        result = run_prompt(prompt)
+        result = run_prompt(prompt, report_type="stdin_prompt")
         # Write output to stdout
         sys.stdout.write(result)
         sys.exit(0)

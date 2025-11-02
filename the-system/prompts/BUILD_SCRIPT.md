@@ -47,17 +47,17 @@ README.md is missing:
 
 Run `uv run --script ./tests/build.py` and verify it works. Fix if needed.
 
-**Report success:**
+**Report your work:**
+
+Write a brief analysis report covering:
+- What you created (files in ./code/ and ./tests/build.py)
+- Build approach and any key decisions
+- Test run results
+- Final artifacts in ./release/
+
+End with:
 ```
 BUILD_SCRIPT_SUCCESS
 
-Created:
-- ./code/[files created]
-- ./tests/build.py
-
-Build output:
-[output]
-
-Artifacts in ./release/:
-[list files]
+Artifacts created: [list]
 ```

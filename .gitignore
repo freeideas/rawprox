@@ -1,8 +1,6 @@
 # Generated directories (produced by the-system scripts)
-/reqs/
-/tests/
-/code/
 /report/
+/workQ/
 
 # Temporary files
 /tmp/

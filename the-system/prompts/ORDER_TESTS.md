@@ -40,22 +40,16 @@ test_startup.py → test_01_startup.py
 test_proxy.py → test_02_basic_proxy.py
 ```
 
-**Report results:**
+**Report your work:**
 
+Write a brief analysis of test dependencies and ordering decisions, then list:
+- Any renames performed
+- Final test order by tier
+- Rationale for ordering choices
+
+End with summary:
 ```
 TESTS_ORDERED
 
-Renamed:
-- test_startup.py → test_01_startup.py
-- test_proxy.py → test_02_basic_proxy.py
-
-Final order:
-00: Build/Installation
-  - _test_00_build_artifacts.py
-01: Lifecycle
-  - test_01_startup.py
-02: Core Features
-  - test_02_basic_proxy.py
+[count] tests organized across [N] tiers
 ```
-
-If no renames needed, just report the current order.

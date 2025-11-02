@@ -125,3 +125,13 @@ Requirement: $REQ_LOGGING_001 - Logging never blocks on disk I/O"""
 - Behavioral test fails → Implement missing functionality
 - Architectural test fails → Refactor to use required pattern
 
+---
+
+## Report Your Work
+
+Write a brief analysis covering:
+- What the test failure indicated (root cause)
+- What you implemented or fixed
+- Which $REQ_IDs are now satisfied
+- Test results after your changes
+

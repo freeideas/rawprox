@@ -17,7 +17,7 @@ rawprox --mcp 8080:example.com:80 @./logs
 rawprox --mcp
 ```
 - Waits for JSON-RPC commands to add port rules
-- Helpful usage message printed to STDERR
+- No help text shown (since MCP server is running)
 - Can be stopped with Ctrl-C or via MCP shutdown command
 
 **Without --mcp flag:**
@@ -27,6 +27,14 @@ rawprox 8080:example.com:80 @./logs
 - Runs as a simple proxy without MCP server
 - No JSON-RPC control available
 - Can only be stopped with Ctrl-C
+
+**Without --mcp and without port rules:**
+```bash
+rawprox
+```
+- Displays help text to STDERR (from HELP.md)
+- Exits immediately with exit code 1
+- No NDJSON output to STDOUT
 
 The `start-mcp` event is emitted to STDOUT (with the TCP port number) only when the `--mcp` flag is used.
 

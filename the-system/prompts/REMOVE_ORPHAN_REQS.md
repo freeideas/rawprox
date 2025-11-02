@@ -155,4 +155,11 @@ public bool Authenticate(string username, string password)
 
 1. Review the list of orphan $REQ_IDs and their locations
 2. Remove or clean up the orphan tags from each file
-4. Preserve all working code and non-orphan requirements
+3. Preserve all working code and non-orphan requirements
+
+## Report Your Work
+
+Write a brief summary of what you did:
+- How many orphans removed
+- Which files were modified
+- Any issues encountered

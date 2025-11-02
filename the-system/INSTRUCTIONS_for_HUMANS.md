@@ -1,68 +1,113 @@
 # How to Build Software with This System
 
-This system transforms README documents into working, fully tested software through AI-assisted, requirement-driven, and test-driven development, all while keeping context windows small enough to avoid ai brain-fog. This is the intersection of context engineering, spec driven development, and test driven development. This gives you ability to write medium- to large-scale enterprise-ready software, repeatably and predictably, but with most of the ease of vibe-coding.
-
-CONTEXT-ENGINEERING: Necessary, but much more is needed to give the AI direction.
-
-SPEC-DRIVEN DEVELOPMENT: Necessary, but not enough, because the AI can read perfect specs and still write the wrong code.
-
-TEST-DRIVEN DEVELOPMENT: Necessary, but not enough, because if the AI can write or modify the tests, it will over-test things that don't matter, avoid testing critical features, and it will artificially make the tests pass. But if the AI CAN'T write and modify the tests, then test writing becomes a giant project for humans.
-
-This system uses specs to write and rewrite tests, frequently verifies the tests against the specs, then uses spec-driven development AND test-driven development, all while keeping contexts laser focus on small job at a time.
----
-
-## Overview
-
-You write documentation describing the software you want to build.
-AI does everything else.
+Transform README documentation into working, tested software through two AI-driven phases.
 
 ---
 
-## Step 1: Write Your Documentation
+## Prerequisites
 
-Create use-case oriented documentation files:
+1. **Install `uv`** (Python script runner)
+   - `winget install --id=astral-sh.uv -e` or `pip install uv` or `brew install uv`
 
-1. **README.md** -- Project overview, what the software does, and what should be in the ./release/ directory.
-2. **./readme/*.md files** -- One file per use case or user perspective or user flow.
+2. **Configure your AI agent**
+   - Edit `./the-system/scripts/prompt_agentic_coder.py`
+   - Set the command for your AI agent (Claude Code, Aider, etc.)
 
-Hypothetical Example for a web server that implements a math-oriented SOAP API:
+3. **Start the task watcher** (leave running in separate terminal)
+   ```bash
+   uv run --script ./the-system/scripts/task_watcher.py
+   ```
 
--- README.md
--- ./readme/API.md
--- ./readme/STARTUP-and-SHUTDOWN.md
--- ./readme/ENDPOINT_TRIGONOMETRY.md
--- ./readme/ENDPOINT_3D-CALCULUS.md
+---
 
-Describe the software you want to create. Include technical details ONLY as needed. For example, if it doesn't matter whether React or Vue or Svelte or Flutter is used for the UI, then don't specify. You might want to say C# or Go or Java or Rust, in case you want to read the code or need a certain platform or performance profile, or interoperability.
+## Phase 1: Requirements Generation
 
-## Step 2: Run ./the-system/scripts/reqs-gen.py (using `uv run --script`)
+**Goal:** Transform your README documentation into testable requirement flows.
 
-This script may exit with **READMEBUG** status, indicating that your README documentation has issues that prevent testable requirements from being written. When this happens:
-1. Read the latest report in ./reports/ to understand the specific issues
-2. Revise the README documentation to correct the problem
-3. Re-run the script
+### Step 1: Write Documentation
 
-Common issue: README says "X is required" but doesn't say what happens when X is missing (error message? default value? ignore?).
+Create use-case oriented documentation:
+- `README.md` -- Project overview, what the software does
+- `./readme/*.md` -- One file per use case, user perspective, or workflow
 
-## Step 3: Briefly look at the documents generated under ./reqs/ then consider revising README documents and repeat
+**Example for a web server:**
+- `README.md` -- Overview and what goes in `./release/`
+- `./readme/STARTUP.md` -- Starting and stopping the server
+- `./readme/API.md` -- API endpoints and responses
+- `./readme/DEPLOYMENT.md` -- Production deployment
 
-## Step 4: When the ./reqs/ documents look correct, run ./the-system/scripts/software-construction.py 
+### Step 2: Generate Flows
 
-## Step 5: As the ai does its work, watch the ./reports/ directory; consider stopping it, revising ./readme/ documents and working back to this step.
+```bash
+uv run --script ./the-system/scripts/reqs-gen.py
+```
 
-## WHEN BUGS ESCAPE DETECTION:
+The AI reads your documentation and generates testable requirement flows in `./reqs/`.
 
--- write ./reports/BUG_REPORT.md
--- run ./report-a-bug.py
+**Common issues:** If the script reports problems (READMEBUG status), it means your README documentation needs clarification. For example, if you say "port number is required" but don't specify what happens when it's missing (error? default? ignore?), the AI can't write testable requirements.
 
-## PREREQUISITES:
+**Performance and load testing:** This system tests functional behavior, not performance characteristics. Write "must handle multiple connections" (testable), not "must handle 10,000 connections" (not reliably testable). Specific throughput numbers, latency requirements, and load testing are out of scope.
 
-1. The small and fast and zero-config `uv` is installed for running python scripts. This allows the ai to run python scripts without worrying about dependencies.
-   -- `winget install --id=astral-sh.uv -e` or `pip install uv` or `brew install uv`, etc.
+### Step 3: Review and Iterate
 
-2. An agentic coder that can be called from the command-line. The system uses `./the-system/scripts/prompt_agentic_coder.py` as a wrapper to call your AI agent. By default, it calls `agentic-coder.bat -p "prompt text"`. To use a different AI agent (Claude Code, Aider, Codex, Gemini-CLI, etc.), edit the `COMMAND` variable at the top of `./the-system/scripts/prompt_agentic_coder.py`.
+1. Read the generated flows in `./reqs/`
+2. Check if they match your intent
+3. **If changes needed:** Revise `./readme/` documentation and re-run `reqs-gen.py`
+4. Repeat until the flows correctly capture all use cases
 
-3. The task watcher must be running before you start:
-   -- `uv run --script ./the-system/scripts/task_watcher.py`
-   -- This processes work queue tasks asynchronously
-   -- Leave it running in a separate terminal throughout your work session
+**Important:** The flows in `./reqs/` are what gets implemented and tested, so they must be right before proceeding to Phase 2.
+
+---
+
+## Phase 2: Software Construction
+
+**Goal:** Build and test software from the requirement flows.
+
+### Step 4: Build Software
+
+```bash
+uv run --script ./the-system/scripts/software-construction.py
+```
+
+The AI automatically:
+1. Creates a build script (`./tests/build.py`)
+2. Writes tests for all requirements
+3. Implements code to pass the tests
+4. Fixes failures until all tests pass
+
+The script runs iteratively -- it will keep working until all tests pass with no changes needed.
+
+### Step 5: Monitor Progress
+
+Watch `./reports/` directory for AI activity reports. If you see problems or want to change requirements:
+1. Stop the construction script (Ctrl+C)
+2. Revise `./readme/` documentation
+3. Re-run `reqs-gen.py` to regenerate flows
+4. Re-run `software-construction.py` to continue building
+
+---
+
+## Summary
+
+Two phases, both with human oversight:
+
+1. **Requirements Generation** -- Write/revise READMEs → AI generates flows → Review flows → Iterate until correct
+2. **Software Construction** -- AI writes tests and code → Runs tests → Fixes failures → Done when all tests pass
+
+Any change to README documentation requires re-running `reqs-gen.py`.
+
+---
+
+## When Bugs Escape Detection
+
+If you find bugs after construction completes:
+1. Write `./reports/BUG_REPORT.md` describing the issue
+2. Update `./readme/` to clarify expected behavior
+3. Re-run `reqs-gen.py` to regenerate flows
+4. Re-run `software-construction.py` to fix the bug
+
+---
+
+## Need More Detail?
+
+See `@the-system/HOW_THIS_WORKS.md` for detailed explanation of flows, tests, and traceability.

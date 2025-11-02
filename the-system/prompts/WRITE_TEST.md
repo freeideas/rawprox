@@ -219,6 +219,18 @@ Even if asked about one $REQ_ID, test **ALL** requirements in that flow file. On
 
 New tests go in `./tests/failing/`. When passing, they're moved to `./tests/passing/`.
 
+### Do NOT Test Ctrl-C/SIGINT
+
+**Never write tests that send Ctrl-C or SIGINT to the application under test.**
+
+On Windows, Ctrl-C signals propagate to parent processes, killing the test runner. Ctrl-C requirements (like `$REQ_SHUTDOWN_001`, `$REQ_SHUTDOWN_005`) are valid and the functionality works in normal operation, but cannot be safely tested in the automated test suite.
+
+If a requirement mentions Ctrl-C/SIGINT:
+- Accept that it's valid but untestable in automated tests
+- Do NOT write assertions to verify Ctrl-C behavior
+- Skip those specific requirements in your test
+- Use `process.kill()` for all test cleanup instead
+
 ### Do NOT Use pytest
 
 Write standalone scripts with `main()`, `assert` statements, return codes, and `sys.exit(main())`.
@@ -242,3 +254,11 @@ Add packages to script metadata:
 4. Tag assertions with `# $REQ_ID`
 5. Use `try`/`finally` for cleanup
 6. Make executable with `uv run --script`
+
+## Report Your Work
+
+Write a brief summary of what you created:
+- Test file path
+- Flow being tested
+- Requirements covered (list $REQ_IDs)
+- Test approach (how you verify behavior)

@@ -16,6 +16,16 @@ Fix failing tests by implementing or correcting code in `./code/`.
 
 ---
 
+## Context: Use-Case Documentation
+
+For broader context about what the application does and why:
+- `./README.md` -- Project overview and architectural intent
+- `./readme/*.md` -- Detailed use-case documentation
+
+These documents explain the "why" behind requirements and provide architectural context. Refer to them when you need to understand the purpose and expected behavior of features you're implementing.
+
+---
+
 ## Instructions
 
 ### Step 1: Understand the Failure
@@ -66,6 +76,12 @@ public void Start()
 
 ### Step 5: Fix Test Only If Truly Incorrect
 
+**IMPORTANT: Tests are standalone Python scripts, not pytest:**
+- Use plain `assert` statements, not `pytest.assert_*`
+- Use `try`/`except`/`finally` for setup/teardown, not pytest fixtures
+- Return exit codes 0/1, not pytest exit codes
+- Do NOT import pytest or use any pytest features
+
 **In most cases, fix the code, not the test.**
 
 **Valid reasons to fix a test:**
@@ -78,48 +94,7 @@ public void Start()
 - Ensure it still verifies same $REQ_IDs
 - Keep all $REQ_ID tags
 
----
-
-## Common Failure Patterns
-
-### Import Error
-```
-ImportError: No module named 'server'
-```
-**Fix:** Create the missing module/class in `./code/`
-
-### Missing Executable
-```
-FileNotFoundError: './release/server.exe'
-```
-**Fix:** Implement code in `./code/`, update `./tests/build.py` to compile and copy to `./release/`
-
-### Assertion Failure
-```
-AssertionError: Process not running  # $REQ_STARTUP_001
-```
-**Fix:** Read the requirement, implement missing functionality
-
----
-
-## Code Organization
-
-Organize `./code/` however makes sense:
-- Single-file projects
-- Multi-file projects
-- Namespace-based structure
-
-All application code goes in `./code/` (never in `./tests/`, `./reqs/`, or `./the-system/`).
-
----
-
-## Build Integration
-
-If test expects executable in `./release/`, update `./tests/build.py` to:
-1. Compile your code
-2. Place executable in `./release/`
-
-Test runner automatically runs `./tests/build.py` before tests.
+**Windows warning:** Always use `process.kill()` for cleanup in tests. Never use `terminate()`, `send_signal()`, or `CTRL_C_EVENT` -- on Windows these propagate to the parent process and kill the test runner.
 
 ---
 
@@ -150,86 +125,3 @@ Requirement: $REQ_LOGGING_001 - Logging never blocks on disk I/O"""
 - Behavioral test fails → Implement missing functionality
 - Architectural test fails → Refactor to use required pattern
 
----
-
-## Example
-
-**Test failing:**
-```python
-def test_startup():
-    process = subprocess.Popen(['./release/server.exe'])
-    time.sleep(1)
-    assert process.poll() is None  # $REQ_STARTUP_001
-
-    sock = socket.socket()
-    assert sock.connect_ex(('localhost', 8080)) == 0  # $REQ_STARTUP_002
-    sock.close()
-```
-
-**Fix with code:**
-```csharp
-// ./code/Server.cs
-using System.Net.Sockets;
-
-class Server
-{
-    static void Main(string[] args)
-    {
-        // $REQ_STARTUP_002: Bind to port 8080
-        TcpListener listener = new TcpListener(IPAddress.Any, 8080);
-        listener.Start();
-
-        // $REQ_STARTUP_001: Keep running
-        while (true) System.Threading.Thread.Sleep(1000);
-    }
-}
-```
-
-**And update build:**
-```python
-# ./tests/build.py
-def main():
-    os.makedirs('./release', exist_ok=True)
-    subprocess.run(['dotnet', 'build', '-c', 'Release', './code/Server.csproj'])
-    shutil.copy('./code/bin/Release/net8.0/Server.exe', './release/server.exe')
-```
-
----
-
-## Important Notes
-
-### Keep It Simple
-
-Only implement what tests require. No unnecessary features, abstractions, or "future-proofing".
-
-### Tests Are the Specification
-
-The test defines correct behavior. If test says "port 8080", use port 8080 -- even if you prefer different.
-
-**Requirements → Tests → Code** (in that order)
-
-### Failing Tests Stay in ./tests/failing/
-
-Don't move tests yourself. Construction script moves them when they pass.
-
-### Iteration Is Normal
-
-You may need multiple attempts:
-1. Implement code
-2. Run test
-3. Fix issue
-4. Repeat
-
-This is expected.
-
----
-
-## Summary
-
-1. Read test output to understand failure
-2. Read test file and requirements
-3. Implement/fix code in `./code/`
-4. Update `./tests/build.py` if needed
-5. Fix test only if truly incorrect (rare)
-6. Keep code simple
-7. Tests define correct behavior

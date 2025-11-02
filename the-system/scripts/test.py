@@ -31,7 +31,7 @@ def run_command(cmd, description):
         cmd_list = shlex.split(cmd, posix=False)  # posix=False for Windows
     else:
         cmd_list = cmd
-    result = subprocess.run(cmd_list, shell=False)
+    result = subprocess.run(cmd_list, shell=False, timeout=300)
     return result.returncode
 
 def main():

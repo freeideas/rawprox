@@ -94,15 +94,12 @@ If removing orphan tags causes a test to become empty or meaningless:
 - Remove the entire test function
 - Or update it to test only valid requirements
 
-**Never leave broken tests** -- tests must still be valid Python after removal.
-
 ---
 
 ## Important Notes
 
 - **Only remove the specified orphan $REQ_IDs** -- do not remove other tags
 - **Preserve code functionality** -- removing tags should not break working code
-- **Keep tests valid** -- tests must still compile and run after tag removal
 - **Be surgical** -- only modify lines containing orphan tags
 
 ---
@@ -158,5 +155,4 @@ public bool Authenticate(string username, string password)
 
 1. Review the list of orphan $REQ_IDs and their locations
 2. Remove or clean up the orphan tags from each file
-3. Ensure tests remain valid and runnable after changes
 4. Preserve all working code and non-orphan requirements

@@ -97,6 +97,9 @@ def run_prompt(prompt_text, timeout=3600):
     # Find all @filepath patterns and replace with file contents
     processed_prompt = re.sub(r'@([^\s]+)', replace_file_ref, prompt_text)
 
+    # Ensure workQ directory exists
+    WORKQ_DIR.mkdir(exist_ok=True)
+
     # Get compact timestamp for task ID
     task_id = get_compact_timestamp()
 

@@ -88,7 +88,13 @@ On shutdown, RawProx closes all connections, stops all listeners, flushes buffer
 
 ## Runtime Requirements
 
-RawProx runs without any external dependencies. It's a single executable that can be run directly.
+RawProx runs without any external dependencies. It's a single executable (`rawprox.exe`) that can be run directly.
+
+The binary is AOT-compiled using .NET 8 or above.
+
+## Build Artifacts
+
+The `./release/` directory contains **only** `rawprox.exe`. No other files (no .pdb, no .dll, no config files) are included in the release build.
 
 ## Limitations
 

@@ -147,93 +147,27 @@ The script iterates through writing/revising tests, writing code, and running te
 
 **AI operates** the work queue until all tests pass.
 
-### Work Queue Priority Order
+### How It Works
 
-The `software-construction.py` script processes work items in this priority order:
+The `software-construction.py` script:
 
-1. **missing_build_script** -- Create `./tests/build.py` (blocks all other work)
-2. **orphan_req_id** -- Remove `$REQ_ID` tags in tests/code that aren't in `./reqs/`
-3. **untested_req** -- Write test for `$REQ_ID` that has no test coverage
-4. **failing_test** -- Fix code until test passes
-5. **final_verification** -- Run all passing tests when no other work items remain
+1. Creates `./tests/build.py` if missing
+2. Removes orphan `$REQ_ID` tags
+3. Writes tests for all untested requirements
+4. Orders tests from general/foundational to specific/advanced using numeric prefixes
+5. Runs tests in order and fixes code until all tests pass with no changes needed
 
-**Note:** Duplicate `$REQ_ID` tags are automatically fixed by `reqs-gen.py`, so they don't appear in the work queue.
+**Note:** Duplicate `$REQ_ID` tags are automatically fixed by `reqs-gen.py`.
 
-**AI works down the queue systematically until all tests pass.**
-
-### Work Item Processing
-
-#### 1. missing_build_script
-
-**AI creates:** `./tests/build.py`
-
-This script must:
-- Compile/package the code
-- Put build artifacts in `./release/`
-- Exit with code 0 on success, non-zero on failure
-- Be runnable with: `uv run --script ./tests/build.py`
-
-#### 2. orphan_req_id
-
-**AI fixes:** `$REQ_ID` exists in tests or code but not in `./reqs/`
-
-- Removes orphan `$REQ_ID` tags from tests and code
-- Updates tests to only verify requirements that exist in `./reqs/`
-
-#### 3. untested_req
-
-**AI creates test:** `$REQ_ID` in `./reqs/` has no test coverage
-
-1. Identifies which flow the `$REQ_ID` belongs to
-2. Creates test file in `./tests/failing/` for that flow (if it doesn't exist)
-   - Name: `test_FLOWNAME.py` (e.g., `test_startup.py` for `startup.md`)
-3. Implements test that verifies all `$REQ_ID` steps in the flow in order
-4. **IMPORTANT:** Tests must be careful to not leave app running
+**Test ordering:**
+Tests are kept ordered from most general to most specific using numeric prefixes (00, 01, 02, etc.). This ensures foundational tests (build, startup) pass before feature tests run.
 
 **One flow = One test file:**
-
 ```
-./reqs/startup.md → ./tests/failing/test_startup.py (initially)
-                 → ./tests/passing/test_startup.py (when passing)
+./reqs/startup.md → ./tests/test_01_startup.py
 ```
 
-**Test structure:**
-- Executes the flow from start to shutdown
-- Verifies each `$REQ_ID` step with assertions
-- Tags each assertion with comment: `# $REQ_ID`
-- Starts in `./tests/failing/`
-- Moves to `./tests/passing/` when all assertions pass
-- **IMPORTANT:** Tests must be careful to not leave app running
-
-#### 4. failing_test
-
-**AI fixes code:** Test in `./tests/failing/` is not passing
-
-**Note:** Infrastructure tests (`_test_*.py`) are processed before requirement tests (`test_*.py`) because they validate build output that other tests depend on.
-
-1. Runs the test with `uv run --script ./the-system/scripts/test.py`
-2. Reads the failure output
-3. Implements or fixes code in `./code/` to make test pass
-4. Implements or fixes code in `./the-system/scripts/test.py` if the test runner is not valid
-5. Runs test again until it passes
-6. Moves to passing when all assertions pass:
-   ```bash
-   mv ./tests/failing/test_NAME.py ./tests/passing/
-   ```
-
-**Code structure:**
-- Organize files however makes tests pass
-- Code can be refactored freely as long as tests pass
-- Frameworks and libraries can be changed
-- Only requirement: tests must pass
-
-#### 5. final_verification
-
-**Automatic final check:** When no other work items remain, all passing tests run automatically
-
-1. `software-construction.py` runs: `uv run --script ./the-system/scripts/test.py` (runs passing tests when no failing tests exist)
-2. If all tests pass, construction is complete
-3. If any fail, they indicate a regression that must be investigated
+Tests execute the flow from start to shutdown, verify each `$REQ_ID` step with assertions, and tag each assertion with `# $REQ_ID` for traceability.
 
 ---
 
@@ -250,24 +184,6 @@ uv run --script ./the-system/scripts/test.py --passing    # Run passing tests
 1. Runs `./tests/build.py` first (compiles/packages code)
 2. Runs specified tests
 3. Shows results
-
----
-
-## Work Iteration Loop
-
-The `software-construction.py` script iterates automatically:
-
-1. Check for highest priority work item (build script → orphans → untested → failing tests)
-2. Process the work item (create test, fix code, etc.)
-3. Run tests: `uv run --script ./the-system/scripts/test.py`
-4. Move passing tests to `./tests/passing/`
-5. Repeat from step 1
-
-**Software is complete when:**
-- All `$REQ_ID` tags have tests
-- All tests are in `./tests/passing/`
-- No failing tests remain
-- Final verification passes (all passing tests still pass)
 
 ---
 
@@ -345,10 +261,9 @@ Code: ./code/server.cs:156, ./code/network.cs:89
 ## Key Principles
 
 - **One flow = One test file**
-- **Tests start in `./tests/failing/`**, move to `./tests/passing/` when done
+- **Tests ordered general to specific** -- numeric prefixes ensure proper execution order
 - **Code is flexible** -- refactor freely while tests pass
-- **Work the queue top to bottom** -- don't skip items
 - **All `$REQ_ID` tags must be unique** across all flows
 - **Every `$REQ_ID` must have a test** that verifies it
-- **Software is done when** no failing tests remain and final verification passes
+- **Software is done when** all tests pass with no changes needed
 - **Scripts drive AI** -- keeping context focused and iterating automatically

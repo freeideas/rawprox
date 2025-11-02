@@ -104,31 +104,26 @@ def run_write_reqs():
     # Run agentic-coder via imported wrapper (no subprocess overhead)
     print(f"→ Running: prompt_agentic_coder.run_prompt()")
 
-    result = run_prompt(prompt)
-
-    print(f"← Command finished with exit code: {result.returncode}")
+    try:
+        result = run_prompt(prompt)
+        print(f"← Command finished successfully")
+    except Exception as e:
+        print(f"\nERROR: run_prompt failed: {e}")
+        sys.exit(1)
 
     # Write report
     report_content = f"""# WRITE_REQS Report
 **Timestamp:** {timestamp()}
-**Exit Code:** {result.returncode}
 
 ---
 
 ## Output
 
-{result.stdout}
+{result}
 """
-    if result.stderr:
-        report_content += f"\n---\n\n## Stderr\n\n{result.stderr}\n"
 
     report_path = write_report("write_reqs", report_content)
     print(f"✓ Report written: {report_path}\n")
-
-    if result.returncode != 0:
-        print(f"\nERROR: agentic-coder failed with exit code {result.returncode}")
-        print(f"See report: {report_path}")
-        sys.exit(1)
 
     print("✓ Phase 1 complete\n")
 
@@ -147,29 +142,23 @@ def run_fix_prompt(prompt_path):
     print(f"→ Running: prompt_agentic_coder.run_prompt()")
     print(f"   (Prompt: @{prompt_path})")
 
-    result = run_prompt(prompt)
-
-    print(f"← Command finished with exit code: {result.returncode}")
-
-    output_text = result.stdout
-
-    if result.returncode != 0:
-        print(f"\nERROR: agentic-coder failed with exit code {result.returncode}")
+    try:
+        output_text = run_prompt(prompt)
+        print(f"← Command finished successfully")
+    except Exception as e:
+        print(f"\nERROR: run_prompt failed: {e}")
 
         # Write error report
         report_content = f"""# {prompt_name.upper()} - ERROR
 **Timestamp:** {timestamp()}
-**Exit Code:** {result.returncode}
-**Error:** Process failed with non-zero exit code
+**Error:** {e}
 
 ---
 
-## Output
+## Error Details
 
-{result.stdout}
+{str(e)}
 """
-        if result.stderr:
-            report_content += f"\n---\n\n## Stderr\n\n{result.stderr}\n"
 
         report_path = write_report(f"{prompt_name}_ERROR", report_content)
         print(f"✓ Error report written: {report_path}")
@@ -187,7 +176,6 @@ def run_fix_prompt(prompt_path):
         # Write error report
         report_content = f"""# {prompt_name.upper()} - PARSE ERROR
 **Timestamp:** {timestamp()}
-**Exit Code:** {result.returncode}
 **Error:** Failed to extract valid status from last line
 
 **Last line:** {status}
@@ -199,8 +187,6 @@ def run_fix_prompt(prompt_path):
 
 {output_text}
 """
-        if result.stderr:
-            report_content += f"\n---\n\n## Stderr\n\n{result.stderr}\n"
 
         report_path = write_report(f"{prompt_name}_PARSE_ERROR", report_content)
         print(f"✓ Error report written: {report_path}")
@@ -211,15 +197,12 @@ def run_fix_prompt(prompt_path):
     # Write report (full output as markdown)
     report_content = f"""# {prompt_name.upper()}
 **Timestamp:** {timestamp()}
-**Exit Code:** {result.returncode}
 **Status:** {status}
 
 ---
 
 {output_text}
 """
-    if result.stderr:
-        report_content += f"\n---\n\n## Stderr\n\n{result.stderr}\n"
 
     report_path = write_report(prompt_name, report_content)
     print(f"✓ Report written: {report_path}\n")

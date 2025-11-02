@@ -69,14 +69,25 @@ def main():
         print(f"✗ Test failed: {e}")
         return 1
     finally:
-        # CRITICAL: Clean up -- terminate processes, close connections
+        # CRITICAL: Clean up -- kill processes, close connections
+        # Use kill() not terminate/signals (Windows signals propagate to parent)
         if 'process' in locals() and process.poll() is None:
-            process.terminate()
+            process.kill()
             process.wait(timeout=5)
 
 if __name__ == '__main__':
     sys.exit(main())
 ```
+
+---
+
+## Context: Use-Case Documentation
+
+For broader context about what the application does and why:
+- `./README.md` -- Project overview and architectural intent
+- `./readme/*.md` -- Detailed use-case documentation
+
+These documents explain the "why" behind requirements and provide user perspective. Refer to them when you need to understand the purpose and context of what you're testing.
 
 ---
 
@@ -101,6 +112,8 @@ Create one test function that:
 4. Cleans up in `finally` block
 
 **Critical:** Tests MUST NOT leave processes running or resources locked.
+
+**Windows warning:** Always use `process.kill()` for cleanup. Never use `terminate()`, `send_signal()`, or `CTRL_C_EVENT` -- on Windows these propagate to the parent process and kill the test runner.
 
 ### Step 4: Tag Each Assertion
 
@@ -159,7 +172,7 @@ def main():
         return 1
     finally:
         if 'process' in locals() and process.poll() is None:
-            process.terminate()
+            process.kill()
             process.wait(timeout=5)
 ```
 

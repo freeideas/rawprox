@@ -40,13 +40,23 @@ def worker_thread(watch_dir, base_name, pending_path):
 
         print(f"[{base_name}] Executing clco.bat...", flush=True)
 
+        # Create temp file for output (avoid pipe deadlock on Windows)
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False, suffix='.txt') as f:
+            temp_output_file = f.name
+
+        # Launch process with output redirected to file
+        # Keep file handle open until process completes
+        # Use line buffering (buffering=1) to ensure output is written immediately
+        output_file = open(temp_output_file, 'w', encoding='utf-8', buffering=1)
         process = subprocess.Popen(
             clco_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=output_file,
+            stderr=subprocess.STDOUT,
             text=True,
             encoding='utf-8',
-            errors='replace'
+            errors='replace',
+            bufsize=1  # Line-buffered for subprocess
         )
 
         # Wait 60s for 0XW_foo.md to appear
@@ -65,6 +75,15 @@ def worker_thread(watch_dir, base_name, pending_path):
             process.kill()
             process.wait()
 
+            # Close output file
+            output_file.close()
+
+            # Clean up temp file
+            try:
+                Path(temp_output_file).unlink()
+            except:
+                pass
+
             # Restore 0XP_foo.md back to T45K_foo.md for retry
             if pending_path.exists():
                 task_path = watch_dir / f"T45K_{base_name}.md"
@@ -76,18 +95,44 @@ def worker_thread(watch_dir, base_name, pending_path):
 
         # 0XW_foo.md appeared! Wait for process to complete (max 1 hour)
         print(f"[{base_name}] Waiting for clco.bat to finish (max 1 hour)...", flush=True)
+        combined_output = ""
         try:
-            stdout, stderr = process.communicate(timeout=3600)  # 1 hour
-            print(f"[{base_name}] Process completed normally", flush=True)
+            returncode = process.wait(timeout=3600)  # 1 hour
+            print(f"[{base_name}] Process completed normally (exit code: {returncode})", flush=True)
         except subprocess.TimeoutExpired:
             print(f"[{base_name}] Process exceeded 1 hour, killing...", flush=True)
             process.kill()
-            stdout, stderr = process.communicate()
-            stderr = (stderr or "") + "\n\n(killed after 1 hour)"
+            process.wait()
+            combined_output = "\n\n(killed after 1 hour)\n"
             print(f"[{base_name}] Process killed", flush=True)
+        except Exception as e:
+            print(f"[{base_name}] Exception during process.wait(): {e}", flush=True)
+            try:
+                process.kill()
+                process.wait()
+            except:
+                pass
+            combined_output = f"\n\n(exception during wait: {e})\n"
+            print(f"[{base_name}] Process killed due to exception", flush=True)
 
-        # Combine stdout and stderr, then write to report
-        combined_output = (stdout or "") + (stderr or "")
+        # Close output file now that process is done
+        output_file.close()
+
+        # Read output from temp file
+        try:
+            with open(temp_output_file, 'r', encoding='utf-8') as f:
+                file_output = f.read()
+            combined_output = file_output + combined_output
+        except Exception as e:
+            print(f"[{base_name}] Warning: Could not read temp output file: {e}", flush=True)
+
+        # Clean up temp file
+        try:
+            Path(temp_output_file).unlink()
+        except:
+            pass
+
+        # Write to report
         if combined_output:
             # Filter out lines containing .claude.json errors
             combined_output = re.sub(r'.*\.claude\.json\b.*?\n', '', combined_output, flags=re.DOTALL)
@@ -186,7 +231,7 @@ def scan_and_prune(watch_dir, age_hours=24):
         except Exception as e:
             print(f"[!] Error processing {filepath.name}: {e}", flush=True)
 
-def test_monitor_thread(watch_dir):
+def test_monitor_thread(watch_dir, result_holder):
     """Monitor thread that waits for test task completion and validates results"""
     # Wait a moment for the watcher to fully start
     time.sleep(2)
@@ -216,10 +261,11 @@ def test_monitor_thread(watch_dir):
     timeout = 300  # 5 minutes
     start_time = time.time()
     completed = set()
+    failed = set()
 
     while time.time() - start_time < timeout:
         for task_name, config in test_tasks.items():
-            if task_name in completed:
+            if task_name in completed or task_name in failed:
                 continue
 
             report_file = watch_dir / f"R3P0RT_{task_name}.md"
@@ -232,22 +278,39 @@ def test_monitor_thread(watch_dir):
                         completed.add(task_name)
                     else:
                         print(f"[TEST] ✗ {task_name}: Report exists but doesn't contain expected prime {config['expected_prime']}", flush=True)
-                        completed.add(task_name)  # Mark as done anyway
+                        failed.add(task_name)
                 except Exception as e:
                     print(f"[TEST] ✗ {task_name}: Error reading report: {e}", flush=True)
+                    failed.add(task_name)
 
-        if len(completed) == len(test_tasks):
-            print(f"\n[TEST] ✓ All test tasks completed successfully!\n", flush=True)
+        if len(completed) + len(failed) == len(test_tasks):
+            if len(completed) == len(test_tasks):
+                print(f"\n[TEST] ✓ All test tasks completed successfully!\n", flush=True)
+                result_holder['success'] = True
+                result_holder['reason'] = 'All test tasks passed'
+            else:
+                print(f"\n[TEST] ✗ Some test tasks failed: {', '.join(failed)}\n", flush=True)
+                result_holder['success'] = False
+                result_holder['reason'] = f'Test tasks failed: {", ".join(failed)}'
             return
 
         time.sleep(1)
 
     # Timeout
-    missing = set(test_tasks.keys()) - completed
+    missing = set(test_tasks.keys()) - completed - failed
     if missing:
         print(f"\n[TEST] ✗ Timeout: Tasks not completed: {', '.join(missing)}\n", flush=True)
+        result_holder['success'] = False
+        result_holder['reason'] = f'Timeout waiting for tasks: {", ".join(missing)}'
     else:
-        print(f"\n[TEST] ✓ All test tasks completed successfully!\n", flush=True)
+        if len(completed) == len(test_tasks):
+            print(f"\n[TEST] ✓ All test tasks completed successfully!\n", flush=True)
+            result_holder['success'] = True
+            result_holder['reason'] = 'All test tasks passed'
+        else:
+            print(f"\n[TEST] ✗ Some test tasks failed: {', '.join(failed)}\n", flush=True)
+            result_holder['success'] = False
+            result_holder['reason'] = f'Test tasks failed: {", ".join(failed)}'
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-threaded task watcher")
@@ -269,27 +332,47 @@ def main():
     print(f"[*] Press Ctrl+C to stop\n", flush=True)
 
     # If test mode, spawn test monitor thread
+    test_result = None
     if args.test:
+        result_holder = {}
         test_thread = threading.Thread(
             target=test_monitor_thread,
-            args=(watch_dir,),
-            daemon=True
+            args=(watch_dir, result_holder),
+            daemon=False  # Not daemon - we need to wait for it
         )
         test_thread.start()
         print(f"[*] Test monitor thread started\n", flush=True)
+        test_result = result_holder
 
     # Simple polling loop
     try:
         while True:
+            # In test mode, check if test thread completed
+            if args.test and test_result is not None and 'success' in test_result:
+                # Test completed - exit with appropriate code
+                print(f"[*] Test mode completed", flush=True)
+                print(f"[*] Exit reason: {test_result['reason']}", flush=True)
+                if test_result['success']:
+                    print(f"\n{'=' * 60}", flush=True)
+                    print(f"EXIT: SUCCESS - {test_result['reason']}", flush=True)
+                    print(f"{'=' * 60}\n", flush=True)
+                    sys.exit(0)
+                else:
+                    print(f"\n{'=' * 60}", flush=True)
+                    print(f"EXIT: FAILURE - {test_result['reason']}", flush=True)
+                    print(f"{'=' * 60}\n", flush=True)
+                    sys.exit(1)
+
             # Scan directory for T45K files and archive old files
             for task_file in scan_and_prune(watch_dir):
                 process_task_file(watch_dir, task_file)
 
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n[*] Stopping watcher...", flush=True)
-
-    print("[*] Watcher stopped", flush=True)
+        print(f"\n{'=' * 60}", flush=True)
+        print("[*] EXIT: User interrupted with Ctrl+C", flush=True)
+        print(f"{'=' * 60}\n", flush=True)
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

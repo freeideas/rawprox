@@ -90,6 +90,13 @@ MCP server with no initial port rules (wait for commands):
 Custom flush interval and daily rotation:
   rawprox 8080:example.com:80 @./logs --flush-millis 5000 --filename-format ""rawprox_%Y-%m-%d.ndjson""
 
+## MCP Introspection
+
+When using --mcp mode, discover available JSON-RPC methods:
+  echo '{""jsonrpc"": ""2.0"", ""method"": ""tools/list"", ""params"": {}, ""id"": 1}' | nc localhost PORT
+
+Replace PORT with the port number from the start-mcp event.
+
 ## Quick Tips
 
 - Press Ctrl-C to stop RawProx gracefully
@@ -775,6 +782,82 @@ Custom flush interval and daily rotation:
                     _cts.Cancel();
                     return new JsonRpcResponse { Id = request.Id, Result = "success" };
 
+                case "tools/list":
+                    var tools = new ToolsListResult
+                    {
+                        Tools = new[]
+                        {
+                            new ToolDescription
+                            {
+                                Name = "start-logging",
+                                Description = "Start logging to a destination (STDOUT or directory)",
+                                InputSchema = new InputSchema
+                                {
+                                    Type = "object",
+                                    Properties = new Dictionary<string, PropertySchema>
+                                    {
+                                        ["directory"] = new PropertySchema { Type = "string", Description = "Directory path, or null for STDOUT" },
+                                        ["filename_format"] = new PropertySchema { Type = "string", Description = "Optional strftime pattern (default: rawprox_%Y-%m-%d-%H.ndjson)" }
+                                    }
+                                }
+                            },
+                            new ToolDescription
+                            {
+                                Name = "stop-logging",
+                                Description = "Stop logging to one or all destinations. Pass {} to stop all, {\"directory\": null} for STDOUT, or {\"directory\": \"./path\"} for specific directory",
+                                InputSchema = new InputSchema
+                                {
+                                    Type = "object",
+                                    Properties = new Dictionary<string, PropertySchema>
+                                    {
+                                        ["directory"] = new PropertySchema { Type = "string", Description = "Directory path, null for STDOUT, or omit to stop all destinations" }
+                                    }
+                                }
+                            },
+                            new ToolDescription
+                            {
+                                Name = "add-port-rule",
+                                Description = "Add a new port forwarding rule at runtime",
+                                InputSchema = new InputSchema
+                                {
+                                    Type = "object",
+                                    Properties = new Dictionary<string, PropertySchema>
+                                    {
+                                        ["local_port"] = new PropertySchema { Type = "integer", Description = "Local port to listen on" },
+                                        ["target_host"] = new PropertySchema { Type = "string", Description = "Target host to forward to" },
+                                        ["target_port"] = new PropertySchema { Type = "integer", Description = "Target port to forward to" }
+                                    },
+                                    Required = new[] { "local_port", "target_host", "target_port" }
+                                }
+                            },
+                            new ToolDescription
+                            {
+                                Name = "remove-port-rule",
+                                Description = "Remove an existing port forwarding rule",
+                                InputSchema = new InputSchema
+                                {
+                                    Type = "object",
+                                    Properties = new Dictionary<string, PropertySchema>
+                                    {
+                                        ["local_port"] = new PropertySchema { Type = "integer", Description = "Local port to stop forwarding" }
+                                    },
+                                    Required = new[] { "local_port" }
+                                }
+                            },
+                            new ToolDescription
+                            {
+                                Name = "shutdown",
+                                Description = "Gracefully shutdown the RawProx application",
+                                InputSchema = new InputSchema
+                                {
+                                    Type = "object",
+                                    Properties = new Dictionary<string, PropertySchema>()
+                                }
+                            }
+                        }
+                    };
+                    return new JsonRpcResponse { Id = request.Id, Result = tools };
+
                 default:
                     return new JsonRpcResponse { Id = request.Id, Error = new JsonRpcError { Code = -32601, Message = "Method not found" } };
             }
@@ -856,6 +939,40 @@ class RemovePortRuleParams
     public int LocalPort { get; set; }
 }
 
+class ToolsListResult
+{
+    [JsonPropertyName("tools")]
+    public ToolDescription[] Tools { get; set; } = Array.Empty<ToolDescription>();
+}
+
+class ToolDescription
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+    [JsonPropertyName("description")]
+    public string Description { get; set; } = "";
+    [JsonPropertyName("inputSchema")]
+    public InputSchema InputSchema { get; set; } = new();
+}
+
+class InputSchema
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "object";
+    [JsonPropertyName("properties")]
+    public Dictionary<string, PropertySchema> Properties { get; set; } = new();
+    [JsonPropertyName("required")]
+    public string[]? Required { get; set; }
+}
+
+class PropertySchema
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
+    [JsonPropertyName("description")]
+    public string Description { get; set; } = "";
+}
+
 // JSON source generator context for AOT compilation
 [JsonSourceGenerationOptions(WriteIndented = false, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(JsonRpcRequest))]
@@ -865,6 +982,11 @@ class RemovePortRuleParams
 [JsonSerializable(typeof(StopLoggingParams))]
 [JsonSerializable(typeof(AddPortRuleParams))]
 [JsonSerializable(typeof(RemovePortRuleParams))]
+[JsonSerializable(typeof(ToolsListResult))]
+[JsonSerializable(typeof(ToolDescription))]
+[JsonSerializable(typeof(InputSchema))]
+[JsonSerializable(typeof(PropertySchema))]
+[JsonSerializable(typeof(Dictionary<string, PropertySchema>))]
 [JsonSerializable(typeof(LogEventStartMcp))]
 [JsonSerializable(typeof(LogEventStartLogging))]
 [JsonSerializable(typeof(LogEventStartLoggingStdout))]

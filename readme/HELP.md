@@ -76,6 +76,15 @@ rawprox --mcp
 rawprox 8080:example.com:80 @./logs --flush-millis 5000 --filename-format "rawprox_%Y-%m-%d.ndjson"
 ```
 
+## MCP Introspection
+
+When using `--mcp` mode, discover available JSON-RPC methods:
+```bash
+echo '{"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}' | nc localhost PORT
+```
+
+Replace PORT with the port number from the `start-mcp` event.
+
 ## Quick Tips
 
 - Press **Ctrl-C** to stop RawProx gracefully

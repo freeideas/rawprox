@@ -44,6 +44,49 @@ The MCP server accepts JSON-RPC 2.0 requests over TCP/IP and returns JSON-RPC 2.
 
 **Available methods:**
 
+### tools/list
+
+Discover all available JSON-RPC methods with their schemas. This is the standard MCP introspection method.
+
+**Parameters:** None (empty object)
+
+**Returns:** A list of all available tools with their names, descriptions, and input schemas.
+
+**Example:**
+```json
+{"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "name": "start-logging",
+        "description": "Start logging to a destination (STDOUT or directory)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "directory": {
+              "type": "string",
+              "description": "Directory path, or null for STDOUT"
+            },
+            "filename_format": {
+              "type": "string",
+              "description": "Optional strftime pattern (default: rawprox_%Y-%m-%d-%H.ndjson)"
+            }
+          }
+        }
+      },
+      ...
+    ]
+  },
+  "id": 1
+}
+```
+
 ### start-logging
 
 Start logging to a destination (STDOUT or directory).

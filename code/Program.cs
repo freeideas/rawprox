@@ -25,6 +25,80 @@ class Program
     private static CancellationTokenSource _cts = new();
     private static bool _shutdownComplete = false;
 
+    private static readonly string HelpText = @"
+RawProx - TCP proxy with full-speed traffic capture and dynamic runtime control
+
+## Usage
+
+rawprox [--mcp] [--flush-millis MS] [--filename-format FORMAT] PORT_RULE... [LOG_DESTINATION...]
+
+## Arguments
+
+--mcp
+  Enable MCP (Model Context Protocol) server for dynamic runtime control via JSON-RPC.
+  When enabled, you can add/remove port rules and start/stop logging without restarting.
+
+--flush-millis MS
+  Set buffer flush interval in milliseconds (default: 2000).
+  Lower values = more frequent disk writes, higher values = larger memory buffers.
+
+--filename-format FORMAT
+  Set log file naming pattern using strftime format (default: rawprox_%Y-%m-%d-%H.ndjson).
+  Examples:
+    - rawprox_%Y-%m-%d.ndjson -- Daily rotation
+    - rawprox_%Y-%m-%d-%H-%M.ndjson -- Per-minute rotation
+    - rawprox.ndjson -- No rotation (single file)
+
+PORT_RULE
+  Format: LOCAL_PORT:TARGET_HOST:TARGET_PORT
+
+  Forward connections from a local port to a remote host and port.
+  You can specify multiple port rules to proxy several services simultaneously.
+
+  Examples:
+    - 8080:example.com:80 -- Forward local port 8080 to example.com:80
+    - 9000:api.example.com:443 -- Forward local port 9000 to api.example.com:443
+
+LOG_DESTINATION
+  Format: @DIRECTORY
+
+  Log traffic to time-rotated files in the specified directory.
+  You can specify multiple destinations to log to several directories simultaneously.
+  If no destination is specified, logs go to STDOUT only.
+
+  Examples:
+    - @./logs -- Log to ./logs/ directory
+    - @/var/log/rawprox -- Log to /var/log/rawprox/ directory
+
+## Examples
+
+Simple proxy with STDOUT logging:
+  rawprox 8080:example.com:80
+
+Proxy with file logging:
+  rawprox 8080:example.com:80 @./logs
+
+Multiple port rules:
+  rawprox 8080:example.com:80 9000:api.example.com:443 @./logs
+
+MCP server for dynamic control:
+  rawprox --mcp 8080:example.com:80 @./logs
+
+MCP server with no initial port rules (wait for commands):
+  rawprox --mcp
+
+Custom flush interval and daily rotation:
+  rawprox 8080:example.com:80 @./logs --flush-millis 5000 --filename-format ""rawprox_%Y-%m-%d.ndjson""
+
+## Quick Tips
+
+- Press Ctrl-C to stop RawProx gracefully
+- All logs use NDJSON (newline-delimited JSON) format
+- Network I/O is never blocked by logging -- if logging can't keep up, RawProx buffers in memory
+- If a port is already in use, RawProx will exit with an error
+- Use --mcp for runtime control without restarting the process
+";
+
     // P/Invoke for direct console I/O
     [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GetStdHandle(int nStdHandle);
@@ -69,6 +143,9 @@ class Program
             {
                 // $REQ_ARGS_012: Validate port rule format and show error
                 Console.Error.WriteLine($"Error: Invalid argument: {args[i]}");
+                Console.Error.WriteLine();
+                Console.Error.WriteLine("Usage: rawprox [--mcp] [PORT_RULE...] [LOG_DESTINATION...]");
+                Console.Error.WriteLine(HelpText);
                 return 1;
             }
         }
@@ -78,6 +155,7 @@ class Program
         if (portRules.Count == 0 && !mcpMode)
         {
             Console.Error.WriteLine("Usage: rawprox [--mcp] [PORT_RULE...] [LOG_DESTINATION...]");
+            Console.Error.WriteLine(HelpText);
             return 1;
         }
 
@@ -118,7 +196,8 @@ class Program
         {
             // $REQ_ARGS_002: Show usage but keep running when --mcp without port rules
             Console.Error.WriteLine("Usage: rawprox [--mcp] [PORT_RULE...] [LOG_DESTINATION...]");
-            Console.Error.WriteLine("RawProx started in MCP mode. Use JSON-RPC to add port rules.");
+            Console.Error.WriteLine(HelpText);
+            Console.Error.WriteLine("\nRawProx started in MCP mode. Use JSON-RPC to add port rules.");
         }
 
         foreach (var rule in portRules)

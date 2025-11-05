@@ -33,7 +33,8 @@ def worker_thread(watch_dir, base_name, pending_path, original_filepath_str):
     try:
         # Launch clco.bat
         clco_cmd = [
-            "c:/acex/appz/cmdbin/clco.bat",
+            "clco.bat",
+            "--model", "sonnet",
             "-p",
             f"rename ./workQ/{pending_path.name} to ./workQ/{working_filename}, then follow the instructions in ./workQ/{working_filename}"
         ]
@@ -204,7 +205,7 @@ def process_task_file(watch_dir, filepath):
         with processing_lock:
             processing.discard(str(filepath))
 
-def scan_and_prune(watch_dir, age_hours=24):
+def scan_and_prune(watch_dir, age_hours=2):
     """
     Generator that scans directory once, yielding T45K files and archiving old files.
 
@@ -237,7 +238,7 @@ def scan_and_prune(watch_dir, age_hours=24):
                 archive_path = archive_dir / new_name
 
                 filepath.rename(archive_path)
-                print(f"[*] Archived (>24h old): {filepath.name} -> archive/{new_name}", flush=True)
+                print(f"[*] Archived: {filepath.name} -> archive/{new_name}", flush=True)
                 continue
 
             # 3) None of the above? Keep looping (implicit)

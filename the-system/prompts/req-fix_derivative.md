@@ -82,12 +82,62 @@ README sections often explain **why** design decisions were made and what the tr
 - Design constraints ("must use non-blocking I/O")
 - Observable actions ("log ready message")
 - Error handling you write ("show error and exit if port missing")
+- **Startup/shutdown steps needed for flow completeness** (see exception below)
 
 **DO remove requirements that are:**
 - Consequences of other requirements
 - OS/language/runtime behavior
 - Explanatory text about design trade-offs
 - Redundant restatements with consequence details
+
+---
+
+## CRITICAL EXCEPTION: Flow Completeness
+
+**DO NOT remove startup/shutdown steps if removal would make a flow incomplete.**
+
+Each flow must be independently testable from start to shutdown (Rule #4: Tell Stories). Even if startup/shutdown steps seem like "natural consequences" of lifecycle requirements defined elsewhere, **keep them if they're necessary for the flow to be executable end-to-end.**
+
+**Example - DO NOT REMOVE:**
+```
+# Configuration Flow (./reqs/configuration.md)
+
+$REQ_CONFIG_STARTUP_001: Start Service
+The service must start with ./release/AiAlfrescoSvc.exe and bind to a port.
+
+$REQ_CONFIG_002: Load Configuration File
+At startup, the service must load appsettings.json...
+
+$REQ_CONFIG_SHUTDOWN_001: Graceful Shutdown
+The service must shut down gracefully when Ctrl+C is pressed.
+```
+
+**Why keep?** Removing these would leave configuration.md with no start/shutdown steps, making it untestable as a standalone flow.
+
+**What IS derivative and should be removed:**
+```
+$REQ_CONFIG_003: OOM Crash on Memory Exhaustion
+If memory fills, the service crashes with out-of-memory error.
+```
+
+**Why remove?** This is a consequence of memory usage, not a configuration feature.
+
+---
+
+## Guideline: Complete Flows vs Truly Derivative
+
+**Test:** If removing a requirement would make the flow untestable end-to-end, keep it (even if similar requirements exist elsewhere).
+
+**Keep:**
+- Startup steps in each flow (needed for test execution)
+- Shutdown steps in each flow (needed for test cleanup)
+- Core sequence steps specific to that flow's use case
+
+**Remove:**
+- Consequences of other requirements (OOM, data loss on crash)
+- OS/runtime behavior (SIGKILL handling, connection auto-close)
+- Design trade-off explanations
+- Redundant restatements with extra consequence details
 
 ---
 
@@ -126,8 +176,11 @@ README sections often explain **why** design decisions were made and what the tr
 4. **Focus on significant issues** -- ignore minor redundancies; only remove clear derivative requirements
 5. Remove them from flow files
 6. Ensure core requirements that cause the derivatives remain
+7. **CRITICAL:** DO NOT remove startup/shutdown steps that make flows incomplete and untestable
 
-**Be careful:** Sometimes README explanatory text helps clarify what the actual requirement is. Extract the requirement, discard the explanation.
+**Be careful:**
+- Sometimes README explanatory text helps clarify what the actual requirement is. Extract the requirement, discard the explanation.
+- Each flow must remain independently testable from start to shutdown after your edits
 
 ---
 

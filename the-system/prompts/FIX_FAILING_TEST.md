@@ -20,7 +20,7 @@ Fix failing tests by implementing or correcting code in `./code/`.
 
 For broader context about what the application does and why:
 - `./README.md` -- Project overview and architectural intent
-- `./readme/*.md` -- Detailed use-case documentation
+- `./readme/*.md` -- See these as needed for more detailed specifications
 
 These documents explain the "why" behind requirements and provide architectural context. Refer to them when you need to understand the purpose and expected behavior of features you're implementing.
 
@@ -30,11 +30,7 @@ These documents explain the "why" behind requirements and provide architectural 
 
 ### Step 1: Understand the Failure
 
-Read test output to identify the issue:
-- **Import errors** -- missing modules/files
-- **Assertion errors** -- expected behavior not implemented
-- **Runtime errors** -- bugs in code
-- **Process errors** -- executable missing or crashes
+Read test output to identify the issue
 
 ### Step 2: Read the Test
 
@@ -45,7 +41,7 @@ Read the failing test file:
 
 ### Step 3: Read the Requirements
 
-For each $REQ_ID, use `uv run --script ./the-system/scripts/reqtrace.py $REQ_ID` to see the requirement definition, flow file, and implementation status.
+As needed, you can use `uv run --script ./the-system/scripts/reqtrace.py $REQ_ID` to see the requirement definitions, and which code files are tagged with that req id.
 
 ### Step 4: Implement or Fix Code
 
@@ -53,8 +49,19 @@ Create/modify files in `./code/` to make test pass.
 
 **Code structure is flexible:**
 - Organize however makes sense
-- Refactor freely as long as tests pass
-- Follow programming language in README.md
+- Refactor freely
+- Follow @the-system/prompts/PHILOSOPHY.md
+
+**Code organization guidance:**
+- **Consider creating focused files for each requirement or requirement group**
+- When implementing `$REQ_STARTUP_001` and `$REQ_STARTUP_002` for port binding, and `$REQ_STARTUP_003` for health checks, consider:
+  - `startup_port_binding.cs` for the port-related requirements
+  - `startup_health.cs` for the health check requirement
+  - Rather than one large `startup.cs` handling everything
+- **Name files to reflect their specific purpose** tied to the requirements they serve
+- **Accept some duplication for clarity** -- it's often better to have similar code in separate files than to tightly couple unrelated requirements
+- This makes requirement tracing clearer: each file serves specific `$REQ_ID`s
+- Not a strict rule -- use judgment -- but when choosing between consolidation and separation, lean toward separation by requirement boundaries
 
 **Tag code with $REQ_ID comments:**
 ```csharp
@@ -74,7 +81,7 @@ public void Start()
 - Format: `// $REQ_ID` or `// $REQ_ID: brief description`
 - Not every line needs a tag -- just key implementation points
 
-### Step 5: Fix Test Only If Truly Incorrect
+### Step 5: Fix Test If It Is Truly Incorrect
 
 **IMPORTANT: Tests are standalone Python scripts, not pytest:**
 - Use plain `assert` statements, not `pytest.assert_*`
@@ -92,9 +99,9 @@ public void Start()
 **If you fix a test:**
 - Document why in a comment
 - Ensure it still verifies same $REQ_IDs
-- Keep all $REQ_ID tags
+- Keep or re-apply $REQ_ID tags
 
-**Windows warning:** Always use `process.kill()` for cleanup in tests. Never use `terminate()`, `send_signal()`, or `CTRL_C_EVENT` -- on Windows these propagate to the parent process and kill the test runner.
+**Windows warning:** Always use `process.kill()` for cleanup in tests. Never use `terminate()`, `send_signal()`, or `CTRL_C_EVENT` -- on Windows these propagate to the parent process and kill the test runner. Even on Linux we want to avoid this for cross-platform reasons
 
 ---
 
@@ -134,4 +141,3 @@ Write a brief analysis covering:
 - What you implemented or fixed
 - Which $REQ_IDs are now satisfied
 - Test results after your changes
-

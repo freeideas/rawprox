@@ -96,9 +96,4 @@ assert 'VERDICT: PASS' in result.stdout  # $REQ_ARCH_001
 - After: (the corrected requirement text, or note if deleted)
 - Why: (what made it untestable and how it was fixed)
 
-**If issues require README changes:**
-- Output exactly: `**README_CHANGES_REQUIRED: true**` on its own line
-- Explain what needs to be specified in the README files
-- Do NOT invent observable behaviors not documented in READMEs
-
 **If no significant issues found:** State that requirements are testable.

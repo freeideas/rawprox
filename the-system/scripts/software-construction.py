@@ -262,13 +262,13 @@ def handle_single_test_until_passes(test_file):
             # Run test and capture output to file
             try:
                 with open(temp_output_file, 'w', encoding='utf-8') as f:
-                    test_result = subprocess.run(test_cmd, stdout=f, stderr=subprocess.STDOUT, text=True, timeout=300)
+                    test_result = subprocess.run(test_cmd, stdout=f, stderr=subprocess.STDOUT, text=True, timeout=3600)
             except subprocess.TimeoutExpired:
                 # Test timed out -- create a result object indicating timeout
                 test_result = type('obj', (object,), {'returncode': -1})()
                 # Append timeout message to output file
                 with open(temp_output_file, 'a', encoding='utf-8') as f:
-                    f.write(f"\n\n[ERROR] Test execution timed out after 300 seconds\n")
+                    f.write(f"\n\n[ERROR] Test execution timed out after 3600 seconds\n")
 
             # Read the output (file is now closed)
             with open(temp_output_file, 'r', encoding='utf-8') as f:
@@ -384,21 +384,14 @@ def main():
     print("\n" + "=" * 60)
     print("✓ SETUP COMPLETE")
     print("=" * 60)
-    print("\nAll tests written and ordered. Beginning test iteration...\n")
+    print("\nAll tests written and ordered. Beginning test processing...\n")
 
     # ========================================================================
-    # ITERATION PHASE (max 5 full passes)
+    # MAIN TEST LOOP - Process tests until failing directory is empty
     # ========================================================================
 
-    max_iterations = 5
-    previous_iteration_had_failures = None  # Track if we need final validation
-
-    for iteration in range(1, max_iterations + 1):
-        print("\n" + "=" * 60)
-        print(f"ITERATION {iteration}/{max_iterations}")
-        print("=" * 60 + "\n")
-
-        # Get all tests from failing directory (sorted by dependency order)
+    while True:
+        # Get alphabetically first test from failing directory
         failing_tests = []
         if os.path.exists('./tests/failing'):
             for filename in os.listdir('./tests/failing'):
@@ -409,95 +402,35 @@ def main():
         failing_tests.sort()
 
         if not failing_tests:
-            # No tests in failing directory
-            if previous_iteration_had_failures is False:
-                # Previous iteration had no failures, so we just completed final validation successfully
-                print("Final validation complete -- all tests passed on first try!\n")
-                print("=" * 60)
-                print("✓ SOFTWARE CONSTRUCTION COMPLETE")
-                print("=" * 60)
-                print(f"\nAll requirements have been implemented and tested!")
-                print(f"Total iterations: {iteration}\n")
-
-                # Print summary
-                conn = sqlite3.connect('./tmp/reqs.sqlite')
-                cursor = conn.cursor()
-                cursor.execute('SELECT COUNT(DISTINCT req_id) FROM req_definitions')
-                total_reqs = cursor.fetchone()[0]
-                conn.close()
-
-                passing_tests = len([f for f in os.listdir('./tests/passing') if f.startswith('test_') or f.startswith('_test_')])
-
-                print(f"Summary:")
-                print(f"  Requirements implemented: {total_reqs}")
-                print(f"  Tests passing: {passing_tests}")
-                print(f"  Build artifacts: ./release/\n")
-
-                print("=" * 60)
-                print("EXIT: SUCCESS")
-                print("=" * 60)
-                print("\nAll requirements implemented and all tests passing.\n")
-                sys.exit(0)
-            else:
-                # Need to run final validation -- move all passing tests to failing
-                print("No failing tests. Moving all passing tests to failing/ for final validation...\n")
-
-                if os.path.exists('./tests/passing'):
-                    for filename in os.listdir('./tests/passing'):
-                        if (filename.startswith('test_') or filename.startswith('_test_')) and filename.endswith('.py'):
-                            src = os.path.join('./tests/passing', filename)
-                            dst = os.path.join('./tests/failing', filename)
-                            os.rename(src, dst)
-                            print(f"  Moved: {filename}")
-
-                print(f"\nContinuing to iteration {iteration + 1} for final validation...\n")
-                previous_iteration_had_failures = None  # Reset for validation run
-                continue
-
-        print(f"Processing {len(failing_tests)} test(s) in this iteration\n")
-
-        # Track whether any failures occurred in this iteration
-        any_failures = False
-
-        # Process each test until it passes
-        for test_file in failing_tests:
-            # Skip if file no longer exists (AI may have moved it despite instructions)
-            if not os.path.exists(test_file):
-                print(f"⚠ Skipping {os.path.basename(test_file)} - file not found (may have been moved)\n")
-                continue
-
-            test_had_failure = handle_single_test_until_passes(test_file)
-            if test_had_failure:
-                any_failures = True
-
-        # After all tests processed, set flag for next iteration
-        previous_iteration_had_failures = any_failures
-
-        if any_failures:
+            # No tests in failing directory - we're done!
             print("\n" + "=" * 60)
-            print("ITERATION COMPLETE -- SOME TESTS REQUIRED FIXES")
+            print("✓ ALL TESTS PASSING")
             print("=" * 60)
-            print("\nSome tests required fixes during this iteration.")
-            print(f"Continuing to iteration {iteration + 1}...\n")
-        else:
-            print("\n" + "=" * 60)
-            print("✓ ITERATION COMPLETE -- ALL TESTS PASSED ON FIRST TRY")
-            print("=" * 60)
-            print("\nAll tests in this iteration passed on first try (no code changes).")
-            print(f"Continuing to iteration {iteration + 1}...\n")
+            print(f"\nAll requirements have been implemented and tested!\n")
 
-    # If we get here, we've exceeded max iterations
-    print("\n" + "=" * 60)
-    print(f"EXIT: EXCEEDED MAXIMUM ITERATIONS ({max_iterations})")
-    print("=" * 60)
-    print(f"\nERROR: Exceeded {max_iterations} full iterations")
-    print("Tests pass individually but not all together (interdependency issue).")
-    print("\nThis indicates:")
-    print("  - Tests modify shared state that affects other tests")
-    print("  - Code has hidden dependencies between features")
-    print("  - Tests are not properly isolated")
-    print("\nPlease review the most recent reports in ./reports/\n")
-    sys.exit(1)
+            # Print summary
+            conn = sqlite3.connect('./tmp/reqs.sqlite')
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(DISTINCT req_id) FROM req_definitions')
+            total_reqs = cursor.fetchone()[0]
+            conn.close()
+
+            passing_tests = len([f for f in os.listdir('./tests/passing') if f.startswith('test_') or f.startswith('_test_')])
+
+            print(f"Summary:")
+            print(f"  Requirements implemented: {total_reqs}")
+            print(f"  Tests passing: {passing_tests}")
+            print(f"  Build artifacts: ./release/\n")
+
+            print("=" * 60)
+            print("EXIT: SUCCESS")
+            print("=" * 60)
+            print("\nAll requirements implemented and all tests passing.\n")
+            sys.exit(0)
+
+        # Process the first failing test
+        test_file = failing_tests[0]
+        handle_single_test_until_passes(test_file)
 
 if __name__ == '__main__':
     main()

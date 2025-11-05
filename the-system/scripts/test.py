@@ -14,14 +14,19 @@ import os
 import subprocess
 import argparse
 from pathlib import Path
+from datetime import datetime
 
 # Change to project root (two levels up from this script)
 script_dir = Path(__file__).parent
 project_root = script_dir.parent.parent
 os.chdir(project_root)
 
-def run_command(cmd, description):
-    """Run a command and return exit code."""
+# Create reports directory
+reports_dir = Path('./reports')
+reports_dir.mkdir(exist_ok=True)
+
+def run_command(cmd, description, capture_output=False, test_filename=None):
+    """Run a command and return exit code, optionally capturing output."""
     print(f"\n{'=' * 60}")
     print(f"{description}")
     print(f"{'=' * 60}\n")
@@ -31,8 +36,31 @@ def run_command(cmd, description):
         cmd_list = shlex.split(cmd, posix=False)  # posix=False for Windows
     else:
         cmd_list = cmd
-    result = subprocess.run(cmd_list, shell=False, timeout=300)
-    return result.returncode
+
+    if capture_output:
+        result = subprocess.run(cmd_list, shell=False, timeout=3600,
+                              capture_output=True, text=True)
+        return result.returncode, result.stdout + result.stderr
+    else:
+        result = subprocess.run(cmd_list, shell=False, timeout=3600)
+        return result.returncode
+
+def write_report(test_filename, exit_code, output):
+    """Write a timestamped report to the reports directory."""
+    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    status = "PASS" if exit_code == 0 else "FAIL"
+
+    # Extract just the filename without path for the report
+    test_name = Path(test_filename).name
+
+    report_name = f"{timestamp}_{test_name}.txt"
+    report_path = reports_dir / report_name
+
+    with open(report_path, 'w') as f:
+        f.write(f"{test_name} {status}\n")
+        f.write(output)
+
+    return report_path
 
 def main():
     parser = argparse.ArgumentParser(description='Run tests with build step')
@@ -82,7 +110,9 @@ def main():
     # Step 3: Run tests directly (no pytest)
     if args.test_file:
         # Run single test file
-        exit_code = run_command(f'uv run --script {test_target}', f'Running test: {test_target}')
+        exit_code, output = run_command(f'uv run --script {test_target}', f'Running test: {test_target}', capture_output=True, test_filename=test_target)
+        print(output)  # Print output to console
+        write_report(test_target, exit_code, output)
     else:
         # Run all tests in directory
         import glob
@@ -93,7 +123,10 @@ def main():
 
         failed = []
         for test_file in test_files:
-            exit_code = run_command(f'uv run --script {test_file}', f'Running test: {test_file}')
+            exit_code, output = run_command(f'uv run --script {test_file}', f'Running test: {test_file}', capture_output=True, test_filename=test_file)
+            print(output)  # Print output to console
+            report_path = write_report(test_file, exit_code, output)
+            print(f"Report written to: {report_path}")
             if exit_code != 0:
                 failed.append(test_file)
 

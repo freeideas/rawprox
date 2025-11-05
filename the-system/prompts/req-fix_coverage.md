@@ -80,9 +80,4 @@ Ensure all testable behaviors from READMEs are represented in `./reqs/`.
 - After: (the new requirement(s) added)
 - Why: (why this was missing coverage)
 
-**If README is unclear or incomplete:**
-- Output exactly: `**README_CHANGES_REQUIRED: true**` on its own line
-- Explain what needs clarification in the README files
-- Do NOT create requirements for behaviors not clearly documented
-
 **If no significant issues found:** State that all important testable behaviors are covered.

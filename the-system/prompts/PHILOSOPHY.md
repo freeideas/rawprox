@@ -46,6 +46,18 @@ All implementation artifacts -- code and tests -- are disposable and have no inh
 - **Abstractions must pay rent** -- if an abstraction doesn't eliminate significant duplication, inline it
 - **Clarity beats cleverness** -- replace clever code with obvious code
 
+### Code Organization: Requirement-Focused Modularity
+
+**Prefer many focused files over few multipurpose files.**
+
+When implementing requirements, lean toward:
+- **Separate files for distinct requirements** -- Each file serves a specific purpose tied to specific requirements
+- **Clear boundaries** -- Files organized by what they accomplish, not just what data they share
+- **Duplication over coupling** -- Some repeated patterns are better than tight coupling between unrelated requirements
+- **Understandable in isolation** -- Each file should make sense without reading the entire codebase
+
+This is not about being pedantic -- it's about clarity. A codebase with many focused files, each serving specific requirements, is often clearer than one with a few large files trying to do everything. When in doubt, split by requirement boundaries rather than consolidating by technical similarities.
+
 ### Tests
 - Test checks behavior. If part of a test is not supported by the requirements, delete the assertion or entire test
 - Test is flaky, slow (>5s), or has reliability issues? Rewrite from scratch

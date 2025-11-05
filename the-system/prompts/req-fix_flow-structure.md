@@ -46,13 +46,15 @@ Each flow document must tell a complete story from application start to shutdown
 ## What to Check
 
 **Completeness:**
-- Clear beginning state
-- Clear ending/shutdown state
+- Clear beginning state (startup steps)
+- Clear ending/shutdown state (shutdown steps)
 - No gaps in sequence
+- **Note:** Startup/shutdown steps may be similar across multiple flows - that's expected and correct. Each flow needs its own complete sequence even if the startup/shutdown requirements look similar.
 
 **Testability:**
 - Can execute as single test
 - End-to-end testable
+- Independently executable (doesn't depend on other flows)
 
 **Organization:**
 - By use case OR technical category (both acceptable)
@@ -94,6 +96,8 @@ When completing flows, **only add requirements documented in READMEs**.
 6. **Fix by reordering** steps to follow logical sequence (start → operations → exit)
 7. **Fix by splitting/merging** flows to make them independently testable
 
+**Important:** It's normal and expected for multiple flows to have similar startup/shutdown steps. Don't avoid adding them just because they appear in other flows - each flow must be independently testable.
+
 ---
 
 ## Output Format
@@ -105,10 +109,5 @@ When completing flows, **only add requirements documented in READMEs**.
 - Before: (the incomplete flow structure, describe what was missing)
 - After: (the complete flow structure, what was added/reordered)
 - Why: (what structural problem was fixed)
-
-**If README lacks information for complete sequences:**
-- Output exactly: `**README_CHANGES_REQUIRED: true**` on its own line
-- Explain what's missing from the README files
-- Do NOT invent startup/shutdown steps not documented in READMEs
 
 **If no significant issues found:** State that all flows contain complete sequences from app start to exit.

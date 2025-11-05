@@ -15,18 +15,6 @@ This system automates software construction through two distinct phases:
 
 ---
 
-## Prerequisites
-
-**Task watcher must be running:**
-
-```bash
-uv run --script ./the-system/scripts/task_watcher.py
-```
-
-Leave this running in a separate terminal. All AI invocations are processed through this work queue system.
-
----
-
 ## Phase 1: Requirements Generation
 
 ### Human Writes Documentation
@@ -233,12 +221,10 @@ Code: ./code/server.cs:156, ./code/network.cs:89
 ./release/                      Build outputs (from build.py)
 ./reports/                      AI activity reports (timestamped)
 ./tmp/                          Requirements database
-./workQ/                        Task queue for AI invocations
 ./the-system/
   scripts/
     reqs-gen.py                 Generate flows from READMEs
     software-construction.py    Build software from flows
-    task_watcher.py             Process work queue tasks
     prompt_agentic_coder.py     Wrapper for AI agent
     test.py                     Run tests with build step
     reqtrace.py                 Trace requirements to tests/code

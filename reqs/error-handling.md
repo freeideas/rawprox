@@ -1,137 +1,95 @@
-# Error Handling Flow
+# Error Handling
 
-**Source:** ./README.md, ./readme/MCP_SERVER.md, ./readme/PERFORMANCE.md
+**Source:** ./README.md, ./readme/HELP.md, ./readme/MCP_SERVER.md
 
-Start RawProx with MCP server, test various error conditions during runtime, and shutdown gracefully.
+Handle error conditions and edge cases appropriately with proper exit behavior and error messages.
 
-## $REQ_ARGS_001: Help Text to STDERR
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
-
-When started without arguments and without `--mcp` flag, RawProx must show help text (from HELP.md) to STDERR.
-
-## $REQ_ARGS_006: Exit Code 1 on Help Display
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
-
-When RawProx displays help text and exits, it must exit with exit code 1.
-
-## $REQ_ARGS_007: No NDJSON on Help Exit
+## $REQ_ERROR_001: Parse Command-Line Arguments
 
 **Source:** ./README.md (Section: "Usage")
 
-When RawProx exits to display help text, it must output only help text to STDERR and never output NDJSON to STDOUT.
+Parse command-line arguments for port rules, log destinations, and options.
 
-## $REQ_ARGS_003: Invalid Port Rule Format
+## $REQ_ERROR_002: Invalid Port Rule Arguments
 
 **Source:** ./README.md (Section: "Usage")
 
-If arguments don't parse as valid port rules or log destinations, RawProx must show an error and exit.
+Show error message and exit when arguments don't parse as valid port rules or log destinations.
 
-## $REQ_ARGS_004: Port Rule Format Validation
+## $REQ_ERROR_003: No Arguments Without MCP
 
-**Source:** ./README.md (Section: "Command-Line Format")
+**Source:** ./README.md (Section: "Usage"), ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
 
-If a port rule doesn't follow the format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`, RawProx must show an error and exit.
+Display help text to STDERR and exit when started without port rules and without `--mcp-port`.
 
-## $REQ_ARGS_005: Log Destination Format Validation
+## $REQ_ERROR_004: No NDJSON on Help Exit
 
-**Source:** ./README.md (Section: "Command-Line Format")
+**Source:** ./README.md (Section: "Usage")
 
-If a log destination doesn't start with `@` followed by a directory path, RawProx must show an error and exit.
+Output only help text to STDERR (no NDJSON to STDOUT) when exiting because there is nothing to do.
 
-## $REQ_PROXY_012: UDP Not Supported
+## $REQ_ERROR_005: Port Already in Use on Startup
+
+**Source:** ./README.md (Section: "Quick Start"), ./readme/HELP.md (Section: "Quick Tips")
+
+Show error message indicating which port is occupied when a port is already in use during startup, then exit.
+
+## $REQ_ERROR_006: Start Valid Listeners
+
+**Source:** ./README.md (Section: "Usage")
+
+Bind to specified local ports and listen for incoming TCP connections for valid port rules.
+
+## $REQ_ERROR_007: Accept Client Connections
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Accept incoming client connections on configured local ports.
+
+## $REQ_ERROR_008: Connect to Target Servers
+
+**Source:** ./README.md (Section: "What It Does")
+
+Establish TCP connections to target hosts and ports specified in port rules.
+
+## $REQ_ERROR_009: TLS Pass-Through Only
 
 **Source:** ./README.md (Section: "Limitations")
 
-RawProx must not support UDP port forwarding -- only TCP connections are accepted and proxied.
+Capture encrypted bytes as-is without TLS/HTTPS decryption, logging encrypted traffic in its encrypted form.
 
-## $REQ_ARGS_011: Accept MCP Flag
+## $REQ_ERROR_010: TCP Only Support
 
-**Source:** ./readme/HELP.md (Section: "Arguments")
+**Source:** ./README.md (Section: "Limitations")
 
-RawProx must accept the `--mcp` command-line flag to enable MCP server mode.
+Accept only TCP port forwarding rules; UDP is not supported.
 
-## $REQ_MCP_001: Start with MCP Flag
+## $REQ_ERROR_011: Log Connection and Traffic Events
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events"), ./readme/LOG_FORMAT.md (Section: "Traffic Events")
 
-When started with `--mcp` flag, RawProx must operate as an MCP server.
+Emit NDJSON events for connection open/close and traffic data.
 
-## $REQ_MCP_002: Random Port Selection
+## $REQ_ERROR_012: Forward Traffic
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Connection")
+**Source:** ./README.md (Section: "What It Does")
 
-MCP server must listen on a random available TCP port between 10000 and 65500.
+Forward all data between client and server bidirectionally.
 
-## $REQ_MCP_003: Emit Start MCP Event Only With Flag
+## $REQ_ERROR_013: MCP Tool Error Response
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior"), ./readme/LOG_FORMAT.md (Section: "MCP Server Events")
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
 
-The `start-mcp` event must be emitted to STDOUT only when the `--mcp` flag is used, including the TCP port number.
+Return JSON-RPC error with code -32602 and descriptive message when MCP tool fails (e.g., port already in use).
 
-## $REQ_MCP_005: JSON-RPC Protocol
-
-**Source:** ./readme/MCP_SERVER.md (Section: "JSON-RPC Protocol")
-
-MCP server must accept JSON-RPC 2.0 requests over TCP/IP.
-
-## $REQ_STARTUP_005: Port Already in Use Error
-
-**Source:** ./README.md (Section: "Quick Start")
-
-If a local port is already in use, RawProx must show an error indicating which port is occupied.
-
-## $REQ_MCP_013: Add Port Rule Method
-
-**Source:** ./readme/MCP_SERVER.md (Section: "add-port-rule")
-
-MCP server must support `add-port-rule` method to add port forwarding rules at runtime.
-
-## $REQ_MCP_014: Add Port Rule Parameters
-
-**Source:** ./readme/MCP_SERVER.md (Section: "add-port-rule")
-
-`add-port-rule` method must accept `local_port`, `target_host`, and `target_port` parameters.
-
-## $REQ_MCP_020: Error Response
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Error Handling")
-
-Failed requests must return JSON-RPC error response with error code and message.
-
-## $REQ_MCP_024: Add Port Rule Port Conflict Error
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Error Handling")
-
-When `add-port-rule` attempts to use a port that's already in use, it must return an error message indicating which port is occupied.
-
-## $REQ_MCP_017: Shutdown Method
-
-**Source:** ./readme/MCP_SERVER.md (Section: "shutdown")
-
-MCP server must support `shutdown` method to gracefully shutdown RawProx.
-
-## $REQ_MCP_018: Shutdown Behavior
-
-**Source:** ./readme/MCP_SERVER.md (Section: "shutdown")
-
-On shutdown command, RawProx must close all connections, stop all listeners, flush buffered logs, and terminate.
-
-## $REQ_SHUTDOWN_002: Close All Connections
+## $REQ_ERROR_014: Graceful Shutdown
 
 **Source:** ./README.md (Section: "Stopping")
 
-On shutdown, RawProx must close all active connections.
+Respond to Ctrl-C (SIGINT) by closing all connections, stopping all listeners, flushing buffered logs, and terminating.
 
-## $REQ_SHUTDOWN_003: Stop All Listeners
+## $REQ_ERROR_015: Exit Code on Help
 
-**Source:** ./README.md (Section: "Stopping")
+**Source:** ./README.md (Section: "Usage")
 
-On shutdown, RawProx must stop all TCP listeners.
-
-## $REQ_SHUTDOWN_004: Flush Buffered Logs
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must flush any buffered logs to disk before terminating.
+Exit with code 1 when displaying help text due to no arguments without --mcp-port.

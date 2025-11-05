@@ -1,83 +1,77 @@
-# Multi-Service Proxying Flow
+# Multi-Service Proxying
 
-**Source:** ./README.md, ./readme/LOG_FORMAT.md
+**Source:** ./README.md, ./readme/HELP.md, ./readme/LOG_FORMAT.md
 
-Verify build artifacts, start RawProx with multiple port rules, proxy multiple services simultaneously, and stop cleanly.
+Run RawProx with multiple port rules to proxy several services simultaneously.
 
-## $REQ_RUNTIME_005: Release Directory Contents
+## $REQ_MULTI_001: Parse Command-Line Arguments
 
-**Source:** ./README.md (Section: "Build Artifacts")
+**Source:** ./README.md (Section: "Usage")
 
-The `./release/` directory must contain only `rawprox.exe` with no other files (no .pdb, no .dll, no config files).
+Parse command-line arguments for multiple port rules and optional log destinations.
 
-## $REQ_STARTUP_002: Start with Multiple Port Rules
+## $REQ_MULTI_002: Accept Multiple Port Rules
 
-**Source:** ./README.md (Section: "Multiple Services")
+**Source:** ./README.md (Section: "Multiple Services"), ./readme/HELP.md (Section: "Arguments")
 
-Start RawProx with multiple port rules provided as separate arguments.
+Accept multiple `LOCAL_PORT:TARGET_HOST:TARGET_PORT` arguments on the command line.
 
-## $REQ_ARGS_014: Flexible Argument Order
-
-**Source:** ./readme/HELP.md (Section: "Usage")
-
-Command-line arguments (flags, port rules, log destinations) must be accepted in any order.
-
-## $REQ_STARTUP_003: Create Independent Listeners
+## $REQ_MULTI_003: Create Independent Listeners
 
 **Source:** ./README.md (Section: "Multiple Services")
 
-Each port rule must create an independent TCP listener on the specified local port.
+Create a separate TCP listener for each port rule provided.
 
-## $REQ_FILE_015: Multiple Destinations
-
-**Source:** ./README.md (Section: "Key Features")
-
-RawProx must support logging to STDOUT and multiple directories simultaneously.
-
-## $REQ_PROXY_016: Accept Connections
-
-**Source:** ./README.md (Section: "Quick Start")
-
-RawProx must accept TCP connections on configured local ports.
-
-## $REQ_PROXY_010: Independent Connections
-
-**Source:** ./README.md (Section: "Multiple Services")
-
-Connections must be forwarded independently with unique connection IDs.
-
-## $REQ_STDOUT_008: Unique Connection IDs
+## $REQ_MULTI_004: Accept Client Connections
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-Each connection opened must receive a different ConnID to distinguish traffic from different connections.
+Accept incoming client connections on each configured local port.
 
-## $REQ_PROXY_021: Forward Traffic Bidirectionally
+## $REQ_MULTI_005: Connect to Target Servers
 
 **Source:** ./README.md (Section: "What It Does")
 
-RawProx must forward all data bidirectionally between client and target.
+Establish TCP connections to the respective target hosts and ports specified in each port rule.
 
-## $REQ_SHUTDOWN_007: Ctrl-C Graceful Shutdown
+## $REQ_MULTI_006: Log Connection Open Events
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Emit NDJSON event with `"event":"open"`, unique ConnID, timestamp, `from` address, and `to` address for each connection.
+
+## $REQ_MULTI_007: Forward Connections Independently
+
+**Source:** ./README.md (Section: "Multiple Services")
+
+Forward connections for each port rule independently of other port rules.
+
+## $REQ_MULTI_008: Log Traffic for All Services
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+Emit NDJSON traffic events with ConnID, timestamp, `data` field, `from` and `to` addresses for traffic on all services.
+
+## $REQ_MULTI_009: Unique Connection IDs Across Services
+
+**Source:** ./README.md (Section: "Multiple Services")
+
+Assign unique connection IDs across all services to distinguish traffic from different connections.
+
+## $REQ_MULTI_010: Log All Services to Same Destination
+
+**Source:** ./README.md (Section: "Multiple Services")
+
+Write log events from all port rules to the same output destination(s).
+
+## $REQ_MULTI_011: Handle Connection Closes
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+When connections close, emit NDJSON event with `"event":"close"`, ConnID, timestamp, `from` and `to` addresses.
+
+## $REQ_MULTI_012: Graceful Shutdown with Ctrl-C
 
 **Source:** ./README.md (Section: "Stopping")
 
-RawProx must shut down gracefully when receiving Ctrl-C signal.
-
-## $REQ_SHUTDOWN_011: Close All Connections
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must close all active connections.
-
-## $REQ_SHUTDOWN_015: Stop All Listeners
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must stop all TCP listeners.
-
-## $REQ_SHUTDOWN_019: Flush Buffered Logs
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must flush any buffered logs to disk before terminating.
+Respond to Ctrl-C (SIGINT) by closing all connections on all services, stopping all listeners, flushing buffered logs, and terminating.

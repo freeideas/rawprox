@@ -10,7 +10,7 @@ RawProx forwards TCP connections while capturing all traffic in real-time. It lo
 
 - **Zero-copy TCP forwarding** -- Full-speed proxying without blocking network I/O
 - **NDJSON logging** -- Structured logs with timestamps, connection IDs, and traffic data
-- **Dynamic control** -- Add/remove port rules at runtime via JSON-RPC (opt-in with `--mcp` flag)
+- **Dynamic control** -- Add/remove port rules at runtime via MCP
 - **Time-rotated logs** -- Automatic file rotation (hourly, daily, per-minute, etc.)
 - **Multiple outputs** -- Log to STDOUT and/or multiple directories simultaneously
 - **No dependencies** -- Single executable, runs anywhere
@@ -22,13 +22,13 @@ RawProx forwards TCP connections while capturing all traffic in real-time. It lo
 rawprox.exe 8080:example.com:80
 
 # Log to time-rotated files
-rawprox.exe 8080:example.com:80 @./logs
+rawprox.exe 8080:example.com:80 @logs
 
 # Multiple port rules
-rawprox.exe 8080:example.com:80 9000:api.example.com:443 @./logs
+rawprox.exe 8080:example.com:80 9000:api.example.com:443 @logs
 
 # With MCP server for dynamic control
-rawprox.exe --mcp-port 8765 8080:example.com:80 @./logs
+rawprox.exe --mcp-port 8765 8080:example.com:80 @logs
 ```
 
 Stop with `Ctrl-C`.
@@ -76,7 +76,7 @@ Examples:
 Monitor several services simultaneously by providing multiple port rules:
 
 ```bash
-rawprox.exe 8080:web.example.com:80 9000:api.example.com:443 3000:db.example.com:5432 @./logs
+rawprox.exe 8080:web.example.com:80 9000:api.example.com:443 3000:db.example.com:5432 @logs
 ```
 
 Each port rule creates an independent listener. Connections are forwarded independently and logged with unique connection IDs.
@@ -90,9 +90,11 @@ On shutdown, RawProx closes all connections, stops all listeners, flushes buffer
 
 ## Runtime Requirements
 
-RawProx runs without any external dependencies. It's a single executable (`rawprox.exe`) that can be run directly.
+RawProx runs without any external dependencies. It's a single executable (`rawprox.exe`, even on Linux) that can be run directly.
 
 The binary is AOT-compiled using .NET 8 or above.
+
+**Note:** The `.exe` extension is used on all platforms for consistency. Linux ignores the extension, while Windows requires it.
 
 ## Build Artifacts
 
@@ -113,7 +115,7 @@ The build process should:
 
 - **[Help Text](./readme/HELP.md)** -- Complete usage and examples (shown when running with no arguments)
 - **[Log Format](./readme/LOG_FORMAT.md)** -- NDJSON event structure and parsing examples
-- **[MCP Server](./readme/MCP_SERVER.md)** -- JSON-RPC API for dynamic control (requires `--mcp` flag)
+- **[MCP Server](./readme/MCP_SERVER.md)** -- JSON-RPC API for dynamic control (requires `--mcp-port` flag)
 - **[Performance](./readme/PERFORMANCE.md)** -- Memory buffering and I/O strategy
 
 ## Use Cases

@@ -5,140 +5,92 @@
 # ///
 
 """
-Wrapper for agentic coder - uses task_watcher.py workQ system.
-
-This script creates tasks in the workQ with compact timestamp IDs and waits for results.
-Task IDs are the last 8 base62 digits of microseconds since epoch.
+Wrapper for agentic coder - launches clco.bat directly.
 
 Usage:
     echo "your prompt here" | prompt-agentic-coder.py
 
 Or from Python:
     import prompt_agentic_coder
-    result = prompt_agentic_coder.run_prompt(prompt_text)
+    result = prompt_agentic_coder.run_prompt(prompt_text, report_type="my_task")
 """
 
 import sys
-import os
-import time
+import subprocess
 import argparse
 import threading
 from pathlib import Path
+from datetime import datetime
 
 # Fix Windows console encoding for Unicode characters
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# Configuration
-WORKQ_DIR = Path("./workQ")
-
-def get_compact_timestamp():
-    """Generate a compact timestamp using base62 encoding of microseconds since epoch.
-
-    Returns the last 8 base62 digits for compactness.
-    Guarantees uniqueness even in tight loops by incrementing if timestamp hasn't changed.
+def run_prompt(prompt_text, report_type="prompt", timeout=3600):
     """
-    import time
-
-    # Base62 alphabet: 0-9, a-z, A-Z
-    BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-    # Get microseconds since epoch
-    microseconds = int(time.time() * 1_000_000)
-
-    # Check if we've returned this timestamp before
-    if hasattr(get_compact_timestamp, '_last_microseconds'):
-        if microseconds <= get_compact_timestamp._last_microseconds:
-            # Collision! Increment the last one
-            microseconds = get_compact_timestamp._last_microseconds + 1
-
-    # Save for next call
-    get_compact_timestamp._last_microseconds = microseconds
-
-    # Convert to base62
-    if microseconds == 0:
-        return "00000000"
-
-    result = []
-    temp = microseconds
-    while temp > 0:
-        result.append(BASE62[temp % 62])
-        temp //= 62
-
-    # Reverse to get correct order
-    base62_str = ''.join(reversed(result))
-
-    # Take last 8 digits
-    return base62_str[-8:].rjust(8, '0')
-
-def run_prompt(prompt_text, report_type, timeout=3600):
-    """
-    Submit a task to the workQ and wait for the result.
+    Run a prompt by launching clco.bat directly.
 
     Args:
-        prompt_text: The prompt to send to the task watcher
+        prompt_text: The prompt to send to clco.bat
         report_type: Type of report for filename (e.g., "failing_test", "write_reqs")
-        timeout: Maximum seconds to wait for result (default: 3600 = 1 hour)
+        timeout: Maximum seconds to wait for clco.bat (default: 3600 = 1 hour)
 
     Returns:
         String containing the AI response
     """
-    # Handle @file references in the prompt
-    import re
+    # Create ./tmp directory if needed
+    tmp_dir = Path("./tmp")
+    tmp_dir.mkdir(exist_ok=True)
 
-    def replace_file_ref(match):
-        filepath = match.group(1)
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                return f.read()
-        except Exception as e:
-            return f"[Error reading {filepath}: {e}]"
+    # Generate timestamp for unique filename
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")
+    prompt_file = tmp_dir / f"{timestamp}_prompt.md"
 
-    # Find all @filepath patterns and replace with file contents
-    processed_prompt = re.sub(r'@([^\s]+)', replace_file_ref, prompt_text)
+    print(f"DEBUG [prompt_agentic_coder]: Writing prompt to {prompt_file}", file=sys.stderr, flush=True)
 
-    # Ensure workQ directory exists
-    WORKQ_DIR.mkdir(exist_ok=True)
+    # Write prompt to file
+    prompt_file.write_text(prompt_text, encoding='utf-8')
 
-    # Get compact timestamp for task ID
-    task_id = get_compact_timestamp()
+    # Build clco.bat command
+    clco_cmd = [
+        "clco.bat",
+        "--model", "sonnet",
+        "-p", f"follow the instructions in @{prompt_file}"
+    ]
 
-    temp_file = WORKQ_DIR / f"{task_id}.md"
-    task_file = WORKQ_DIR / f"T45K_{task_id}.md"
-    report_file = WORKQ_DIR / f"R3P0RT_{task_id}.md"
+    print(f"DEBUG [prompt_agentic_coder]: Launching clco.bat (timeout: {timeout}s)...", file=sys.stderr, flush=True)
 
-    print(f"DEBUG [prompt_agentic_coder]: Creating task: {task_file.name}", file=sys.stderr, flush=True)
-    print(f"DEBUG [prompt_agentic_coder]: Processed prompt length: {len(processed_prompt)} chars", file=sys.stderr, flush=True)
+    # Launch clco.bat and capture output
+    try:
+        result = subprocess.run(
+            clco_cmd,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            timeout=timeout
+        )
 
-    # Write to temp file first, then atomically rename to avoid race condition
-    temp_file.write_text(processed_prompt, encoding='utf-8')
-    temp_file.rename(task_file)
+        # Combine stdout and stderr
+        ai_response = result.stdout
+        if result.stderr:
+            ai_response += f"\n\n--- stderr ---\n{result.stderr}"
 
-    # Wait for the report file to appear
-    print(f"DEBUG [prompt_agentic_coder]: Waiting for {report_file.name}...", file=sys.stderr, flush=True)
-    start_time = time.time()
+        print(f"DEBUG [prompt_agentic_coder]: clco.bat completed (exit code: {result.returncode})", file=sys.stderr, flush=True)
+        print(f"DEBUG [prompt_agentic_coder]: Output length: {len(ai_response)} chars", file=sys.stderr, flush=True)
 
-    while True:
-        if report_file.exists():
-            # Report file appeared, read it
-            ai_response = report_file.read_text(encoding='utf-8')
-            print(f"DEBUG [prompt_agentic_coder]: Report received ({len(ai_response)} chars)", file=sys.stderr, flush=True)
+        # Write structured report to ./reports/
+        reports_dir = Path("./reports")
+        reports_dir.mkdir(exist_ok=True)
 
-            # Write structured report to ./reports/
-            from datetime import datetime
-            from pathlib import Path
+        report_timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        final_report_path = reports_dir / f"{report_timestamp}_{report_type}.md"
 
-            timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            reports_dir = Path("./reports")
-            reports_dir.mkdir(exist_ok=True)
-
-            final_report_path = reports_dir / f"{timestamp}_{report_type}.md"
-
-            # Format report with prompt and response
-            report_title = report_type.replace('_', ' ').title()
-            structured_report = f"""# {report_title}
-**Timestamp:** {timestamp}
+        # Format report with prompt and response
+        report_title = report_type.replace('_', ' ').title()
+        structured_report = f"""# {report_title}
+**Timestamp:** {report_timestamp}
 
 ---
 
@@ -153,20 +105,19 @@ def run_prompt(prompt_text, report_type, timeout=3600):
 {ai_response}
 """
 
-            final_report_path.write_text(structured_report, encoding='utf-8')
-            print(f"DEBUG [prompt_agentic_coder]: Wrote report to {final_report_path}", file=sys.stderr, flush=True)
+        final_report_path.write_text(structured_report, encoding='utf-8')
+        print(f"DEBUG [prompt_agentic_coder]: Wrote report to {final_report_path}", file=sys.stderr, flush=True)
 
-            return ai_response
+        return ai_response
 
-        # Check timeout
-        elapsed = time.time() - start_time
-        if elapsed > timeout:
-            error_msg = f"Timeout: Report file {report_file.name} did not appear within {timeout}s"
-            print(f"ERROR [prompt_agentic_coder]: {error_msg}", file=sys.stderr, flush=True)
-            raise TimeoutError(error_msg)
-
-        # Sleep briefly before checking again
-        time.sleep(0.5)
+    except subprocess.TimeoutExpired:
+        error_msg = f"Timeout: clco.bat did not complete within {timeout}s"
+        print(f"ERROR [prompt_agentic_coder]: {error_msg}", file=sys.stderr, flush=True)
+        raise TimeoutError(error_msg)
+    except Exception as e:
+        error_msg = f"Error running clco.bat: {e}"
+        print(f"ERROR [prompt_agentic_coder]: {error_msg}", file=sys.stderr, flush=True)
+        raise
 
 def test_worker(task_name, prompt, expected_answer, results):
     """Worker thread for test mode"""
@@ -204,7 +155,7 @@ def run_test_mode():
     results = {}
     threads = []
 
-    # Spawn worker threads
+    # Spawn worker threads (each will launch its own clco.bat process)
     for task_name, config in test_tasks.items():
         thread = threading.Thread(
             target=test_worker,
@@ -239,14 +190,14 @@ def main():
         run_test_mode()
         return
 
-    # Normal mode: read prompt from stdin, submit to workQ, write result to stdout
+    # Normal mode: read prompt from stdin, launch clco.bat, write result to stdout
     prompt = sys.stdin.read()
 
     if not prompt.strip():
         print("Error: No prompt provided on stdin", file=sys.stderr)
         sys.exit(1)
 
-    # Execute via workQ
+    # Execute via clco.bat
     try:
         result = run_prompt(prompt, report_type="stdin_prompt")
         # Write output to stdout

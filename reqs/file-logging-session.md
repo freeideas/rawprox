@@ -1,203 +1,161 @@
-# File Logging Session Flow
+# File Logging Session
 
-**Source:** ./README.md, ./readme/LOG_FORMAT.md, ./readme/PERFORMANCE.md
+**Source:** ./README.md, ./readme/HELP.md, ./readme/LOG_FORMAT.md, ./readme/PERFORMANCE.md
 
-Start RawProx with time-rotated file logging, proxy connections, and stop cleanly.
+Start RawProx with directory logging, proxy connections with time-rotated file output, and shut down cleanly.
 
-## $REQ_STARTUP_001: Start with Single Port Rule
-
-**Source:** ./README.md (Section: "Quick Start")
-
-Start RawProx with a single port rule in the format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`.
-
-## $REQ_FILE_001: Log Destination Prefix
-
-**Source:** ./README.md (Section: "Command-Line Format")
-
-Log destinations must be specified with `@` prefix followed by directory path.
-
-## $REQ_ARGS_013: Log Destination Format Validation
-
-**Source:** ./README.md (Section: "Command-Line Format")
-
-If a log destination doesn't start with `@` followed by a directory path, RawProx must show an error and exit.
-
-## $REQ_ARGS_008: Flexible Argument Order
-
-**Source:** ./readme/HELP.md (Section: "Usage")
-
-Command-line arguments (flags, port rules, log destinations) must be accepted in any order.
-
-## $REQ_ARGS_009: Accept Flush Millis Flag
-
-**Source:** ./readme/HELP.md (Section: "Arguments")
-
-RawProx must accept the `--flush-millis MS` command-line flag to set buffer flush interval in milliseconds.
-
-## $REQ_ARGS_010: Accept Filename Format Flag
-
-**Source:** ./readme/HELP.md (Section: "Arguments")
-
-RawProx must accept the `--filename-format FORMAT` command-line flag to set log file naming pattern using strftime format.
-
-## $REQ_STARTUP_004: Listen on Configured Ports
+## $REQ_FILE_001: Parse Port Rule Argument
 
 **Source:** ./README.md (Section: "Usage")
 
-RawProx must bind to all local ports specified in port rules and accept incoming TCP connections on those ports.
+Parse command-line argument in format `LOCAL_PORT:TARGET_HOST:TARGET_PORT` (e.g., `8080:example.com:80`).
 
-## $REQ_FILE_002: Create Directory
+## $REQ_FILE_002: Parse Log Destination Argument
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
+**Source:** ./README.md (Section: "Usage")
 
-If the target directory doesn't exist, it must be created automatically.
+Parse command-line argument in format `@DIRECTORY` (e.g., `@./logs` or `@/var/log/rawprox`).
 
-## $REQ_FILE_006: Hourly Rotation Default
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
-
-Default filename format must be `rawprox_%Y-%m-%d-%H.ndjson` for hourly rotation.
-
-## $REQ_FILE_007: Custom Filename Format
+## $REQ_FILE_003: Create Log Directory
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
 
-Filename format must support strftime patterns via `--filename-format` option.
+Automatically create the log directory if it doesn't exist.
 
-## $REQ_FILE_008: Start Logging Events
+## $REQ_FILE_004: Default Filename Format
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
+**Source:** ./readme/HELP.md (Section: "Arguments"), ./readme/LOG_FORMAT.md (Section: "File Rotation")
 
-When logging starts to a directory, emit a `start-logging` event with directory path and filename_format.
+Use `rawprox_%Y-%m-%d-%H.ndjson` as the default filename format for hourly rotation.
 
-## $REQ_PROXY_001: Accept Connections
+## $REQ_FILE_005: Custom Filename Format
 
-**Source:** ./README.md (Section: "Quick Start")
+**Source:** ./readme/HELP.md (Section: "Arguments")
 
-RawProx must accept TCP connections on configured local ports.
+Accept `--filename-format FORMAT` argument to specify custom strftime pattern for log filenames.
 
-## $REQ_PROXY_002: Connect to Target
+## $REQ_FILE_006: Generate Time-Based Filenames
 
-**Source:** ./README.md (Section: "Command-Line Format")
+**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
 
-For each incoming connection, RawProx must establish a connection to the target host and port.
+Generate log filenames based on current time using the strftime pattern.
 
-## $REQ_STDOUT_005: Connection Open Events
+## $REQ_FILE_007: Append Mode
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
+
+Open log files in append mode, allowing restarts to continue writing to the same file without overwriting.
+
+## $REQ_FILE_008: Start Proxy Listener
+
+**Source:** ./README.md (Section: "Usage")
+
+Bind to the specified local port and listen for incoming TCP connections.
+
+## $REQ_FILE_009: Accept Client Connection
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-When a TCP connection opens, log an event with `event: "open"`, unique ConnID, timestamp, from address, and to address.
+Accept incoming client connections on the local port.
 
-## $REQ_PROXY_003: Forward Traffic Bidirectionally
+## $REQ_FILE_010: Connect to Target Server
 
 **Source:** ./README.md (Section: "What It Does")
 
-RawProx must forward all data bidirectionally between client and target.
+Establish TCP connection to the target host and port specified in the port rule.
 
-## $REQ_STDOUT_007: Traffic Data Events
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
-
-For each chunk of transmitted data, log an event with ConnID, timestamp, data (JSON-escaped), from address, and to address.
-
-## $REQ_FILE_010: Buffered Writes
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Memory Buffering Strategy")
-
-Events must be buffered in memory and flushed to disk at intervals.
-
-## $REQ_FILE_011: Default Flush Interval
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
-
-Default flush interval must be 2000 milliseconds.
-
-## $REQ_FILE_012: Configurable Flush Interval
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
-
-Flush interval must be configurable via `--flush-millis` option.
-
-## $REQ_FILE_013: Batched File I/O
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
-
-Files must be opened, written with entire buffer, and closed during each flush cycle.
-
-## $REQ_FILE_014: Minimum Flush Frequency
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
-
-Files must never be opened/written/closed more frequently than the flush interval.
-
-## $REQ_FILE_017: Files Unlocked Between Flushes
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
-
-Log files must be kept closed and unlocked between flush cycles, allowing other processes to read, move, or analyze them while RawProx runs.
-
-## $REQ_FILE_018: Minimize System Calls
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
-
-File I/O must minimize system calls to approximately one write per flush interval.
-
-## $REQ_FILE_003: Append Mode
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
-
-Files must be opened in append mode so restarts continue writing to the same file.
-
-## $REQ_FILE_004: Never Overwrite
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
-
-Existing files must never be overwritten.
-
-## $REQ_FILE_005: Create Files Automatically
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
-
-Files must be created automatically if they don't exist.
-
-## $REQ_FILE_016: One JSON Object Per Line
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Parsing")
-
-Each log event in files must be a complete JSON object on a single line.
-
-## $REQ_STDOUT_006: Connection Close Events
+## $REQ_FILE_011: Log Connection Open Event
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-When a TCP connection closes, log an event with `event: "close"`, ConnID, timestamp, from address, and to address.
+Emit NDJSON event with `"event":"open"`, unique ConnID, timestamp, `from` address, and `to` address.
 
-## $REQ_SHUTDOWN_001: Ctrl-C Graceful Shutdown
+## $REQ_FILE_012: Forward Client to Server Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data received from client to target server.
+
+## $REQ_FILE_013: Log Client to Server Traffic
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+Emit NDJSON traffic event with ConnID, timestamp, `data` field, `from` (client address), and `to` (target server address).
+
+## $REQ_FILE_014: Forward Server to Client Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data received from target server back to client.
+
+## $REQ_FILE_015: Log Server to Client Traffic
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+Emit NDJSON traffic event with ConnID, timestamp, `data` field, `from` (server address), and `to` (client address).
+
+## $REQ_FILE_016: Handle Connection Close
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+When connection closes, emit NDJSON event with `"event":"close"`, ConnID, timestamp, `from` and `to` addresses.
+
+## $REQ_FILE_017: Memory Buffering
+
+**Source:** ./readme/PERFORMANCE.md (Section: "Memory Buffering Strategy")
+
+Buffer log events in memory before writing to disk.
+
+## $REQ_FILE_018: Default Flush Interval
+
+**Source:** ./readme/HELP.md (Section: "Arguments"), ./readme/PERFORMANCE.md (Section: "Batched File I/O")
+
+Use 2000 milliseconds as the default flush interval.
+
+## $REQ_FILE_019: Custom Flush Interval
+
+**Source:** ./readme/HELP.md (Section: "Arguments")
+
+Accept `--flush-millis MS` argument to configure buffer flush interval.
+
+## $REQ_FILE_020: Batched File Writes
+
+**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
+
+Write events to disk in batches at flush intervals, not per-event.
+
+## $REQ_FILE_021: Open-Write-Close Cycle
+
+**Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
+
+Open file, write entire buffer, and close file during each flush cycle.
+
+## $REQ_FILE_022: File Rotation on Time Change
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
+
+Switch to new log file when the filename (based on strftime pattern) changes due to time passing.
+
+## $REQ_FILE_023: No File Overwrite
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
+
+Never overwrite existing log files, always append.
+
+## $REQ_FILE_024: Never Block Network I/O
+
+**Source:** ./readme/PERFORMANCE.md (Section: "Core Principle")
+
+Never slow down network data forwarding due to file write operations.
+
+## $REQ_FILE_025: Graceful Shutdown with Ctrl-C
 
 **Source:** ./README.md (Section: "Stopping")
 
-RawProx must shut down gracefully when receiving Ctrl-C signal.
+Respond to Ctrl-C (SIGINT) by closing all connections, stopping listeners, flushing buffered logs, and terminating.
 
-## $REQ_FILE_009: Stop Logging Events
+## $REQ_FILE_026: Memory Buffer Growth on High Traffic
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
+**Source:** ./readme/PERFORMANCE.md (Section: "Memory Buffering Strategy")
 
-When logging stops to a directory, emit a `stop-logging` event with directory path.
-
-## $REQ_SHUTDOWN_010: Close All Connections
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must close all active connections.
-
-## $REQ_SHUTDOWN_014: Stop All Listeners
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must stop all TCP listeners.
-
-## $REQ_SHUTDOWN_018: Flush Buffered Logs
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must flush any buffered logs to disk before terminating.
+If network traffic rate exceeds disk write rate, buffer grows in memory.

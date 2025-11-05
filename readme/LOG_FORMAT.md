@@ -58,7 +58,7 @@ Emitted when TCP connections open or close:
 
 **Fields:**
 - `time` -- ISO 8601 timestamp with microsecond precision (UTC)
-- `ConnID` -- Connection identifier as 5-character base-62 string. Each connection opened receives a different ConnID to distinguish traffic from different connections.
+- `ConnID` -- Connection identifier as 8-character base-62 string. The first connection uses the last 8 base62 digits of microseconds since the Unix epoch. Each subsequent connection increments by one to distinguish traffic from different connections.
 - `event` -- Either `"open"` or `"close"`
 - `from` -- Source address (IP:port)
 - `to` -- Destination address (hostname/IP:port)

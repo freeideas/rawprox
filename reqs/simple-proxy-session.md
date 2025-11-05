@@ -1,257 +1,143 @@
-# Simple Proxy Session Flow
+# Simple Proxy Session
 
-**Source:** ./README.md, ./readme/HELP.md, ./readme/LOG_FORMAT.md, ./readme/PERFORMANCE.md
+**Source:** ./README.md, ./readme/HELP.md, ./readme/LOG_FORMAT.md
 
-Verify build artifacts, start RawProx, proxy connections with STDOUT logging, and stop cleanly.
+Start RawProx with a single port rule, proxy connections, log traffic to STDOUT, and shut down cleanly.
 
-## $REQ_RUNTIME_001: Single Executable
-
-**Source:** ./README.md (Section: "Key Features")
-
-RawProx must be distributed as a single executable.
-
-## $REQ_RUNTIME_002: No External Dependencies
-
-**Source:** ./README.md (Section: "Runtime Requirements")
-
-RawProx must run without any external dependencies.
-
-## $REQ_RUNTIME_003: Direct Execution
-
-**Source:** ./README.md (Section: "Runtime Requirements")
-
-RawProx must be runnable directly as an executable.
-
-## $REQ_RUNTIME_004: AOT Compilation
-
-**Source:** ./README.md (Section: "Runtime Requirements")
-
-RawProx must be AOT-compiled using .NET 8 or above.
-
-## $REQ_RUNTIME_006: Release Directory Contents
-
-**Source:** ./README.md (Section: "Build Artifacts")
-
-The `./release/` directory must contain only `rawprox.exe` with no other files (no .pdb, no .dll, no config files).
-
-## $REQ_BUILD_001: Clean Release Directory
-
-**Source:** ./README.md (Section: "Build Artifacts")
-
-The build process must ensure no debug files (.pdb) or runtime files (.dll) are included in the `./release/` directory.
-
-## $REQ_BUILD_002: Native AOT Single-File Compilation
-
-**Source:** ./README.md (Section: "Build Artifacts")
-
-The build process must compile as .NET Native AOT single-file with no dependencies.
-
-## $REQ_BUILD_003: Place Executable in Release Directory
-
-**Source:** ./README.md (Section: "Build Artifacts")
-
-The build process must place only `rawprox.exe` in the `./release/` directory.
-
-## $REQ_STARTUP_008: Start with Single Port Rule
-
-**Source:** ./README.md (Section: "Quick Start")
-
-Start RawProx with a single port rule in the format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`.
-
-## $REQ_STARTUP_006: No MCP Server Without Flag
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
-
-When started without the `--mcp` flag, RawProx must NOT operate as an MCP server and must NOT accept JSON-RPC control requests.
-
-## $REQ_ARGS_012: Port Rule Format Validation
-
-**Source:** ./README.md (Section: "Command-Line Format")
-
-If a port rule doesn't follow the format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`, RawProx must show an error and exit.
-
-## $REQ_ARGS_015: Flexible Argument Order
-
-**Source:** ./readme/HELP.md (Section: "Usage")
-
-Command-line arguments (flags, port rules, log destinations) must be accepted in any order.
-
-## $REQ_STARTUP_009: Listen on Configured Ports
+## $REQ_SIMPLE_001: Parse Port Rule Argument
 
 **Source:** ./README.md (Section: "Usage")
 
-RawProx must bind to all local ports specified in port rules and accept incoming TCP connections on those ports.
+Parse command-line argument in format `LOCAL_PORT:TARGET_HOST:TARGET_PORT` (e.g., `8080:example.com:80`).
 
-## $REQ_STARTUP_010: Port Already in Use Error
+## $REQ_SIMPLE_002: Start Proxy Listener
 
-**Source:** ./README.md (Section: "Quick Start")
+**Source:** ./README.md (Section: "Usage")
 
-If a local port is already in use, RawProx must show an error indicating which port is occupied.
+Bind to the specified local port and listen for incoming TCP connections.
 
-## $REQ_STDOUT_001: Default to STDOUT
+## $REQ_SIMPLE_003: Accept Client Connection
 
-**Source:** ./README.md (Section: "Command-Line Format")
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-When no log destination is specified, logs must go to STDOUT only.
+Accept incoming client connections on the local port.
 
-## $REQ_STDOUT_002: NDJSON Format
+## $REQ_SIMPLE_004: Connect to Target Server
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Log Format Specification")
+**Source:** ./README.md (Section: "What It Does")
 
-All log output must be in NDJSON (Newline-Delimited JSON) format.
+Establish TCP connection to the target host and port specified in the port rule.
 
-## $REQ_STDOUT_003: One JSON Object Per Line
+## $REQ_SIMPLE_005: Log Connection Open Event
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Emit NDJSON event with `"event":"open"`, unique ConnID (8-character base-62 string), timestamp, `from` address, and `to` address.
+
+## $REQ_SIMPLE_006: Forward Client to Server Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data received from client to target server.
+
+## $REQ_SIMPLE_007: Log Client to Server Traffic
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+Emit NDJSON traffic event with ConnID, timestamp, `data` field containing transmitted bytes, `from` (client address), and `to` (target server address).
+
+## $REQ_SIMPLE_008: Forward Server to Client Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data received from target server back to client.
+
+## $REQ_SIMPLE_009: Log Server to Client Traffic
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+Emit NDJSON traffic event with ConnID, timestamp, `data` field containing transmitted bytes, `from` (server address), and `to` (client address).
+
+## $REQ_SIMPLE_010: Handle Connection Close
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+When connection closes, emit NDJSON event with `"event":"close"`, ConnID, timestamp, `from` and `to` addresses.
+
+## $REQ_SIMPLE_011: Binary Data Escaping
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+JSON-escape binary data in `data` field using standard JSON escaping rules.
+
+## $REQ_SIMPLE_012: Unique Connection Identifiers
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Assign a different ConnID to each connection opened, ensuring all events for the same connection share the same ConnID.
+
+## $REQ_SIMPLE_012A: ConnID Generation Algorithm
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Generate ConnID as 8-character base-62 string where the first connection uses the last 8 base62 digits of microseconds since Unix epoch, and each subsequent connection increments by one.
+
+## $REQ_SIMPLE_013: Timestamp Format
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Use ISO 8601 timestamp format with microsecond precision in UTC for all events.
+
+## $REQ_SIMPLE_014: NDJSON Format
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Parsing")
 
-Each log event must be a complete JSON object on a single line.
+Output one complete JSON object per line, with no comma separators between objects.
 
-## $REQ_PROXY_018: Accept Connections
+## $REQ_SIMPLE_015: Default STDOUT Logging
 
-**Source:** ./README.md (Section: "Quick Start")
+**Source:** ./README.md (Section: "Usage"), ./readme/LOG_FORMAT.md (Section: "Output Destinations")
 
-RawProx must accept TCP connections on configured local ports.
+When no log destination is specified, write all events to STDOUT.
 
-## $REQ_PROXY_019: Connect to Target
+## $REQ_SIMPLE_016: Graceful Shutdown with Ctrl-C
 
-**Source:** ./README.md (Section: "Command-Line Format")
+**Source:** ./README.md (Section: "Stopping")
 
-For each incoming connection, RawProx must establish a connection to the target host and port.
+Respond to Ctrl-C (SIGINT) by closing all connections, stopping listeners, flushing buffered logs, and terminating.
 
-## $REQ_STDOUT_016: Connection Open Events
+## $REQ_SIMPLE_017: Full-Speed Forwarding
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+**Source:** ./README.md (Section: "Key Features"), ./readme/PERFORMANCE.md (Section: "Core Principle")
 
-When a TCP connection opens, log an event with `event: "open"`, unique ConnID, timestamp, from address, and to address.
+Maintain full throughput for proxied connections without blocking or slowing down network I/O due to logging operations.
 
-## $REQ_STDOUT_022: Unique Connection IDs
+## $REQ_SIMPLE_018: No External Dependencies
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+**Source:** ./README.md (Section: "Runtime Requirements")
 
-Each connection opened must receive a different ConnID to distinguish traffic from different connections.
+Run as a single executable without requiring external libraries or runtime dependencies.
 
-## $REQ_STDOUT_009: ISO 8601 Timestamps
+## $REQ_SIMPLE_019: AOT Compilation
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+**Source:** ./README.md (Section: "Build Artifacts")
 
-All timestamps must be in ISO 8601 format with microsecond precision in UTC.
+Compile as .NET Native AOT (single-file, no dependencies).
 
-## $REQ_PROXY_023: Forward Traffic Bidirectionally
+## $REQ_SIMPLE_020: Single Executable Output
 
-**Source:** ./README.md (Section: "What It Does")
+**Source:** ./README.md (Section: "Build Artifacts")
 
-RawProx must forward all data bidirectionally between client and target.
+Place only rawprox.exe in ./release/ directory after build, with no debug files (.pdb) or runtime files (.dll) included.
 
-## $REQ_PROXY_006: Capture All Traffic
+## $REQ_SIMPLE_021: Cross-Platform .exe Extension
 
-**Source:** ./README.md (Section: "What It Does")
+**Source:** ./README.md (Section: "Runtime Requirements")
 
-RawProx must log every byte sent and received during proxied connections.
+Use .exe extension on all platforms (Linux and Windows) for consistency.
 
-## $REQ_PROXY_004: Full-Speed Proxying
-
-**Source:** ./README.md (Section: "Key Features")
-
-RawProx must provide full-speed TCP proxying without blocking network I/O.
-
-## $REQ_PROXY_008: TCP Only
-
-**Source:** ./README.md (Section: "Limitations")
-
-RawProx must accept TCP port forwarding rules only.
-
-## $REQ_PROXY_009: No TLS Decryption
-
-**Source:** ./README.md (Section: "Limitations")
-
-RawProx must capture encrypted bytes as-is without TLS/HTTPS decryption.
-
-## $REQ_PROXY_007: Log Encrypted Traffic
-
-**Source:** ./README.md (Section: "Limitations")
-
-Encrypted traffic must be logged in its encrypted form.
-
-## $REQ_PROXY_005: Never Block Network I/O
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Core Principle: Never Block Network I/O")
-
-Network data forwarding must never be slowed down by file write operations.
-
-## $REQ_STDOUT_021: Traffic Data Events
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
-
-For each chunk of transmitted data, log an event with ConnID, timestamp, data (JSON-escaped), from address, and to address.
-
-## $REQ_STDOUT_010: Binary Data Escaping
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
-
-Binary data must be JSON-escaped using standard JSON string escaping rules.
-
-## $REQ_STDOUT_004: Buffered Output
+## $REQ_SIMPLE_022: STDOUT Buffered Flushing
 
 **Source:** ./readme/PERFORMANCE.md (Section: "STDOUT Mode")
 
-Events to STDOUT must be buffered and flushed at intervals.
-
-## $REQ_PROXY_011: Memory Buffering for Slow Logging
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Core Principle: Never Block Network I/O")
-
-If logging can't keep up with network traffic, events must be buffered in memory.
-
-## $REQ_PROXY_013: Serialize Events to JSON
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Memory Buffering Strategy")
-
-Network events must be serialized to JSON and appended to memory buffer.
-
-## $REQ_PROXY_014: Buffer Flush at Intervals
-
-**Source:** ./readme/PERFORMANCE.md (Section: "Memory Buffering Strategy")
-
-Buffer must flush to disk at configurable intervals.
-
-## $REQ_STDOUT_018: Connection Close Events
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
-
-When a TCP connection closes, log an event with `event: "close"`, ConnID, timestamp, from address, and to address.
-
-## $REQ_STDOUT_013: Close Event Direction Swap
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
-
-The `from` and `to` fields in close events may swap between open/close events depending on which side initiated the close.
-
-## $REQ_SHUTDOWN_005: Ctrl-C Stopping Mechanism
-
-**Source:** ./README.md (Section: "Stopping")
-
-Ctrl-C must be available as a stopping mechanism for RawProx.
-
-## $REQ_SHUTDOWN_009: Ctrl-C Graceful Shutdown
-
-**Source:** ./README.md (Section: "Stopping")
-
-RawProx must shut down gracefully when receiving Ctrl-C signal.
-
-## $REQ_SHUTDOWN_013: Close All Connections
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must close all active connections.
-
-## $REQ_SHUTDOWN_017: Stop All Listeners
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must stop all TCP listeners.
-
-## $REQ_SHUTDOWN_021: Flush Buffered Logs
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must flush any buffered logs to disk before terminating.
+When logging to STDOUT, buffer events in memory and flush at intervals (not per-event).

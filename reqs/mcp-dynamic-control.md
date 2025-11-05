@@ -1,209 +1,221 @@
-# MCP Dynamic Control Flow
+# MCP Dynamic Control
 
-**Source:** ./readme/MCP_SERVER.md, ./readme/LOG_FORMAT.md
+**Source:** ./README.md, ./readme/HELP.md, ./readme/MCP_SERVER.md, ./readme/LOG_FORMAT.md
 
-Start RawProx with MCP server, dynamically add/remove port rules and logging destinations, then shutdown via JSON-RPC.
+Start RawProx with MCP server enabled for dynamic runtime control over HTTP.
 
-## $REQ_MCP_026: Start with MCP Flag
+## $REQ_MCP_001: Parse Command-Line Arguments
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
+**Source:** ./README.md (Section: "Usage")
 
-When started with `--mcp` flag, RawProx must operate as an MCP server.
+Parse command-line arguments including port rules and `--mcp-port PORT` flag.
 
-## $REQ_MCP_023: MCP with Initial Port Rules
+## $REQ_MCP_002: Enable MCP Server
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
+**Source:** ./readme/HELP.md (Section: "Arguments"), ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
 
-When started with `--mcp` flag AND port rules, RawProx must start logging immediately and make MCP server available for dynamic control.
+Accept `--mcp-port PORT` argument to enable MCP server on specified port.
 
-## $REQ_ARGS_002: No Port Rules With MCP
+## $REQ_MCP_003: System-Assigned Port
 
-**Source:** ./README.md (Section: "Usage"), ./readme/MCP_SERVER.md (Section: "Start-up Behavior")
+**Source:** ./readme/HELP.md (Section: "Arguments"), ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
 
-When started with `--mcp` flag but without port rules, RawProx must NOT show usage message (since MCP server is running) and must wait for MCP commands to add port rules.
+When `--mcp-port 0` is specified, let the system choose an available port.
 
-## $REQ_MCP_027: Random Port Selection
+## $REQ_MCP_004: Start MCP HTTP Server
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Connection")
+**Source:** ./readme/MCP_SERVER.md (Section: "MCP Protocol")
 
-MCP server must listen on a random available TCP port between 10000 and 65500.
+Start HTTP server for MCP protocol implementation.
 
-## $REQ_MCP_021: Listen on Localhost
+## $REQ_MCP_005: Emit MCP Ready Event
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Connection")
+**Source:** ./readme/LOG_FORMAT.md (Section: "MCP Server Events"), ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
 
-MCP server must accept connections on localhost at the selected port.
+Emit NDJSON event with `"event":"mcp-ready"` and `endpoint` field containing the full HTTP URL when MCP server starts.
 
-## $REQ_MCP_028: Emit Start MCP Event Only With Flag
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Start-up Behavior"), ./readme/LOG_FORMAT.md (Section: "MCP Server Events")
-
-The `start-mcp` event must be emitted to STDOUT only when the `--mcp` flag is used, including the TCP port number.
-
-## $REQ_MCP_004: Start MCP Event Format
+## $REQ_MCP_006: MCP Ready Event to STDOUT
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "MCP Server Events")
 
-The `start-mcp` event must include timestamp, event type, and port number.
+Emit MCP ready event to STDOUT as NDJSON when using `--mcp-port`.
 
-## $REQ_MCP_029: JSON-RPC Protocol
+## $REQ_MCP_007: Start Without Port Rules
 
-**Source:** ./readme/MCP_SERVER.md (Section: "JSON-RPC Protocol")
+**Source:** ./readme/HELP.md (Section: "Examples"), ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
 
-MCP server must accept JSON-RPC 2.0 requests over TCP/IP.
+When started with `--mcp-port` but no port rules, wait for MCP commands to add port rules without displaying help text or exiting.
 
-## $REQ_MCP_022: TCP Transport for JSON-RPC
+## $REQ_MCP_008: Start with Initial Port Rules
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Connection")
+**Source:** ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
 
-MCP server must accept JSON-RPC requests over TCP/IP connections.
+When started with `--mcp-port` and port rules, start listeners immediately and enable MCP for dynamic control.
 
-## $REQ_MCP_007: Start Logging Method
+## $REQ_MCP_009: MCP Protocol Implementation
 
-**Source:** ./readme/MCP_SERVER.md (Section: "start-logging")
+**Source:** ./readme/MCP_SERVER.md (Section: "MCP Protocol")
 
-MCP server must support `start-logging` method to start logging to STDOUT or directory.
+Implement Model Context Protocol over HTTP with JSON-RPC 2.0.
 
-## $REQ_MCP_008: Start Logging Parameters
+## $REQ_MCP_010: Initialize Method
 
-**Source:** ./readme/MCP_SERVER.md (Section: "start-logging")
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
 
-`start-logging` method must accept `directory` (path or null) and optional `filename_format` parameters.
+Accept `initialize` method with protocol version, capabilities, and client info parameters.
 
-## $REQ_FILE_023: Start Logging Events
+## $REQ_MCP_011: Initialize Response
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
+
+Respond to `initialize` with protocol version `2024-11-05`, capabilities object with `tools`, and server info.
+
+## $REQ_MCP_011A: SSE Transport Support
+
+**Source:** ./readme/MCP_SERVER.md (Section: "MCP Protocol")
+
+Accept SSE (Server-Sent Events) for transport.
+
+## $REQ_MCP_012: Tools List Method
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
+
+Implement `tools/list` method to return available tools with schemas.
+
+## $REQ_MCP_013: Start Logging Tool
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
+
+Provide `start-logging` tool with `directory` (string or null) and optional `filename_format` parameters.
+
+## $REQ_MCP_014: Start Logging Event
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
 
-When logging starts to a directory, emit a `start-logging` event with directory path and filename_format.
+Emit NDJSON event with `"event":"start-logging"`, `directory`, and optional `filename_format` fields when logging starts.
 
-## $REQ_STDOUT_011: Start Logging Event for STDOUT
+## $REQ_MCP_015: Stop Logging Tool
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
+
+Provide `stop-logging` tool with optional `directory` parameter.
+
+## $REQ_MCP_016: Stop All Logging
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
+
+When `stop-logging` is called with no `directory` argument, stop logging to all destinations.
+
+## $REQ_MCP_017: Stop STDOUT Logging
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
+
+When `stop-logging` is called with `"directory": null`, stop only STDOUT logging.
+
+## $REQ_MCP_018: Stop Directory Logging
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
+
+When `stop-logging` is called with a directory path, stop only logging to that specific directory.
+
+## $REQ_MCP_019: Stop Logging Event
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
 
-When logging starts to STDOUT, emit a `start-logging` event with `directory: null` and no `filename_format` field.
+Emit NDJSON event with `"event":"stop-logging"` and `directory` field when logging stops.
 
-## $REQ_MCP_030: Add Port Rule Method
+## $REQ_MCP_020: Add Port Rule Tool
 
-**Source:** ./readme/MCP_SERVER.md (Section: "add-port-rule")
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
 
-MCP server must support `add-port-rule` method to add port forwarding rules at runtime.
+Provide `add-port-rule` tool with `local_port`, `target_host`, and `target_port` parameters.
 
-## $REQ_MCP_031: Add Port Rule Parameters
+## $REQ_MCP_021: Runtime Port Rule Addition
 
-**Source:** ./readme/MCP_SERVER.md (Section: "add-port-rule")
+**Source:** ./README.md (Section: "Key Features"), ./readme/MCP_SERVER.md (Section: "Tool Reference")
 
-`add-port-rule` method must accept `local_port`, `target_host`, and `target_port` parameters.
+Add new port forwarding rules at runtime via MCP without restarting.
 
-## $REQ_MCP_019: Success Response
+## $REQ_MCP_022: Remove Port Rule Tool
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Error Handling")
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
 
-Successful requests must return JSON-RPC response with `result: "success"`.
+Provide `remove-port-rule` tool with `local_port` parameter.
 
-## $REQ_MCP_034: Error Response
+## $REQ_MCP_023: Runtime Port Rule Removal
 
-**Source:** ./readme/MCP_SERVER.md (Section: "Error Handling")
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
 
-Failed requests must return JSON-RPC error response with error code and message.
+Remove existing port forwarding rules at runtime via MCP.
 
-## $REQ_PROXY_015: Accept Connections
+## $REQ_MCP_024: Shutdown Tool
 
-**Source:** ./README.md (Section: "Quick Start")
+**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
 
-RawProx must accept TCP connections on configured local ports.
+Provide `shutdown` tool with no parameters for graceful shutdown.
 
-## $REQ_PROXY_020: Forward Traffic Bidirectionally
+## $REQ_MCP_025: Tools Call Method
 
-**Source:** ./README.md (Section: "What It Does")
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
 
-RawProx must forward all data bidirectionally between client and target.
+Implement `tools/call` method to execute tools with provided arguments.
 
-## $REQ_STDOUT_014: Connection Open Events
+## $REQ_MCP_026: Tool Success Response
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
+
+Return success response with `content` array containing text results when tool succeeds.
+
+## $REQ_MCP_027: Tool Error Response
+
+**Source:** ./readme/MCP_SERVER.md (Section: "Example Session")
+
+Return error response with error code and message when tool fails.
+
+## $REQ_MCP_028: Accept Client Connections
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-When a TCP connection opens, log an event with `event: "open"`, unique ConnID, timestamp, from address, and to address.
+Accept incoming client connections on configured local ports.
 
-## $REQ_STDOUT_019: Traffic Data Events
+## $REQ_MCP_029: Connect to Target Servers
+
+**Source:** ./README.md (Section: "What It Does")
+
+Establish TCP connections to target hosts and ports specified in port rules.
+
+## $REQ_MCP_030: Log Connection Events
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
+
+Emit NDJSON events for connection open and close with ConnID, timestamp, `from` and `to` addresses.
+
+## $REQ_MCP_031: Forward Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data between client and server bidirectionally.
+
+## $REQ_MCP_032: Log Traffic Events
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
 
-For each chunk of transmitted data, log an event with ConnID, timestamp, data (JSON-escaped), from address, and to address.
+Emit NDJSON traffic events with ConnID, timestamp, `data` field, `from` and `to` addresses.
 
-## $REQ_MCP_009: Stop Logging Method
+## $REQ_MCP_033: MCP Graceful Shutdown
 
-**Source:** ./readme/MCP_SERVER.md (Section: "stop-logging")
+**Source:** ./README.md (Section: "Stopping"), ./readme/MCP_SERVER.md (Section: "Tool Reference")
 
-MCP server must support `stop-logging` method to stop logging to one or all destinations.
+Close all connections, stop listeners, flush buffered logs, and terminate when shutdown tool is called.
 
-## $REQ_MCP_010: Stop Logging All Destinations
-
-**Source:** ./readme/MCP_SERVER.md (Section: "stop-logging")
-
-When `stop-logging` is called with empty parameters, it must stop ALL logging to all destinations.
-
-## $REQ_MCP_011: Stop Logging STDOUT
-
-**Source:** ./readme/MCP_SERVER.md (Section: "stop-logging")
-
-When `stop-logging` is called with `{"directory": null}`, it must stop only STDOUT logging.
-
-## $REQ_MCP_012: Stop Logging Specific Directory
-
-**Source:** ./readme/MCP_SERVER.md (Section: "stop-logging")
-
-When `stop-logging` is called with specific directory path, it must stop only logging to that directory.
-
-## $REQ_FILE_024: Stop Logging Events
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
-
-When logging stops to a directory, emit a `stop-logging` event with directory path.
-
-## $REQ_STDOUT_012: Stop Logging Event for STDOUT
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
-
-When logging stops to STDOUT, emit a `stop-logging` event with `directory: null`.
-
-## $REQ_MCP_015: Remove Port Rule Method
-
-**Source:** ./readme/MCP_SERVER.md (Section: "remove-port-rule")
-
-MCP server must support `remove-port-rule` method to remove existing port forwarding rules.
-
-## $REQ_MCP_016: Remove Port Rule Parameters
-
-**Source:** ./readme/MCP_SERVER.md (Section: "remove-port-rule")
-
-`remove-port-rule` method must accept `local_port` parameter.
-
-## $REQ_MCP_025: Remove Port Rule Stops Listener
-
-**Source:** ./readme/MCP_SERVER.md (Section: "remove-port-rule")
-
-When a port rule is removed, the listener on that local port must stop accepting new connections.
-
-## $REQ_SHUTDOWN_006: MCP Shutdown Stopping Mechanism
+## $REQ_MCP_034: Ctrl-C Graceful Shutdown
 
 **Source:** ./README.md (Section: "Stopping")
 
-MCP shutdown command must be available as a stopping mechanism via JSON-RPC when using `--mcp` flag.
+Respond to Ctrl-C (SIGINT) by closing all connections, stopping listeners, flushing buffered logs, and terminating.
 
-## $REQ_MCP_032: Shutdown Method
+## $REQ_MCP_035: Create Log Directory for start-logging
 
-**Source:** ./readme/MCP_SERVER.md (Section: "shutdown")
+**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
 
-MCP server must support `shutdown` method to gracefully shutdown RawProx.
-
-## $REQ_MCP_033: Shutdown Behavior
-
-**Source:** ./readme/MCP_SERVER.md (Section: "shutdown")
-
-On shutdown command, RawProx must close all connections, stop all listeners, flush buffered logs, and terminate.
-
-## $REQ_MCP_006: JSON-RPC Responses
-
-**Source:** ./readme/MCP_SERVER.md (Section: "JSON-RPC Protocol")
-
-MCP server must return JSON-RPC 2.0 responses with success results or error objects.
+Automatically create the directory if it doesn't exist when start-logging tool is called with a directory path.

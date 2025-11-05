@@ -1,95 +1,107 @@
-# Multiple Log Destinations Flow
+# Multiple Log Destinations
 
-**Source:** ./README.md, ./readme/LOG_FORMAT.md
+**Source:** ./README.md, ./readme/HELP.md, ./readme/LOG_FORMAT.md, ./readme/PERFORMANCE.md
 
-Start RawProx with multiple simultaneous log destinations (STDOUT and multiple directories), proxy traffic, and verify all destinations receive events through shutdown.
+Run RawProx logging to STDOUT and multiple directories simultaneously.
 
-## $REQ_STARTUP_007: Start with Single Port Rule
+## $REQ_MULTIDEST_001: Parse Port Rule Argument
 
-**Source:** ./README.md (Section: "Quick Start")
+**Source:** ./README.md (Section: "Usage")
 
-Start RawProx with a single port rule in the format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`.
+Parse command-line argument in format `LOCAL_PORT:TARGET_HOST:TARGET_PORT` (e.g., `8080:example.com:80`).
 
-## $REQ_FILE_025: Multiple Destinations
+## $REQ_MULTIDEST_002: Accept Multiple Log Destinations
 
-**Source:** ./README.md (Section: "Key Features")
+**Source:** ./readme/HELP.md (Section: "Arguments")
 
-RawProx must support logging to STDOUT and multiple directories simultaneously.
+Accept multiple `@DIRECTORY` arguments on the command line.
 
-## $REQ_FILE_019: Multiple Start Logging Events
+## $REQ_MULTIDEST_003: Create Log Directories
 
-**Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
+**Source:** ./readme/LOG_FORMAT.md (Section: "File Rotation")
 
-When logging starts to multiple destinations, emit a separate `start-logging` event for each destination.
+Automatically create log directories if they don't exist for each specified destination.
 
-## $REQ_FILE_020: Events Written to All Destinations
+## $REQ_MULTIDEST_004: Start Proxy Listener
 
-**Source:** ./README.md (Section: "Key Features")
+**Source:** ./README.md (Section: "Usage")
 
-All log events (connection opens, data transfers, closes) must be written to all active log destinations.
+Bind to the specified local port and listen for incoming TCP connections.
 
-## $REQ_PROXY_017: Accept Connections
+## $REQ_MULTIDEST_005: Accept Client Connection
 
-**Source:** ./README.md (Section: "Quick Start")
+**Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-RawProx must accept TCP connections on configured local ports.
+Accept incoming client connections on the local port.
 
-## $REQ_PROXY_022: Forward Traffic Bidirectionally
+## $REQ_MULTIDEST_006: Connect to Target Server
 
 **Source:** ./README.md (Section: "What It Does")
 
-RawProx must forward all data bidirectionally between client and target.
+Establish TCP connection to the target host and port specified in the port rule.
 
-## $REQ_STDOUT_015: Connection Open Events
+## $REQ_MULTIDEST_007: Log Connection Open Event
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-When a TCP connection opens, log an event with `event: "open"`, unique ConnID, timestamp, from address, and to address.
+Emit NDJSON event with `"event":"open"`, unique ConnID, timestamp, `from` address, and `to` address.
 
-## $REQ_STDOUT_020: Traffic Data Events
+## $REQ_MULTIDEST_008: Log to All Destinations
+
+**Source:** ./README.md (Section: "Key Features")
+
+Write each log event to all specified destinations (STDOUT and/or directories) simultaneously.
+
+## $REQ_MULTIDEST_009: Forward Client to Server Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data received from client to target server.
+
+## $REQ_MULTIDEST_010: Log Client to Server Traffic
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
 
-For each chunk of transmitted data, log an event with ConnID, timestamp, data (JSON-escaped), from address, and to address.
+Emit NDJSON traffic event with ConnID, timestamp, `data` field, `from` (client address), and `to` (target server address).
 
-## $REQ_STDOUT_017: Connection Close Events
+## $REQ_MULTIDEST_011: Forward Server to Client Traffic
+
+**Source:** ./README.md (Section: "What It Does")
+
+Forward all data received from target server back to client.
+
+## $REQ_MULTIDEST_012: Log Server to Client Traffic
+
+**Source:** ./readme/LOG_FORMAT.md (Section: "Traffic Events")
+
+Emit NDJSON traffic event with ConnID, timestamp, `data` field, `from` (server address), and `to` (client address).
+
+## $REQ_MULTIDEST_013: Handle Connection Close
 
 **Source:** ./readme/LOG_FORMAT.md (Section: "Connection Events")
 
-When a TCP connection closes, log an event with `event: "close"`, ConnID, timestamp, from address, and to address.
+When connection closes, emit NDJSON event with `"event":"close"`, ConnID, timestamp, `from` and `to` addresses.
 
-## $REQ_FILE_021: Independent Directory Buffers
+## $REQ_MULTIDEST_014: Independent Directory Buffers
+
+**Source:** ./readme/PERFORMANCE.md (Section: "Memory Buffering Strategy")
+
+Maintain separate memory buffers for each log destination.
+
+## $REQ_MULTIDEST_015: Independent Flush Intervals
 
 **Source:** ./readme/PERFORMANCE.md (Section: "Batched File I/O")
 
-Each log destination must maintain its own memory buffer and flush independently at the configured interval.
+Flush each destination's buffer at the configured interval independently.
 
-## $REQ_SHUTDOWN_008: Ctrl-C Graceful Shutdown
+## $REQ_MULTIDEST_016: STDOUT Plus Directories
 
-**Source:** ./README.md (Section: "Stopping")
+**Source:** ./README.md (Section: "Key Features"), ./readme/LOG_FORMAT.md (Section: "Output Destinations")
 
-RawProx must shut down gracefully when receiving Ctrl-C signal.
+Support logging to STDOUT simultaneously with directory destinations.
 
-## $REQ_FILE_022: Multiple Stop Logging Events
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "Logging Control Events")
-
-When logging stops, emit a separate `stop-logging` event for each active destination.
-
-## $REQ_SHUTDOWN_012: Close All Connections
+## $REQ_MULTIDEST_017: Graceful Shutdown with Ctrl-C
 
 **Source:** ./README.md (Section: "Stopping")
 
-On shutdown, RawProx must close all active connections.
-
-## $REQ_SHUTDOWN_016: Stop All Listeners
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must stop all TCP listeners.
-
-## $REQ_SHUTDOWN_020: Flush Buffered Logs
-
-**Source:** ./README.md (Section: "Stopping")
-
-On shutdown, RawProx must flush any buffered logs to disk before terminating.
+Respond to Ctrl-C (SIGINT) by closing all connections, stopping listeners, flushing buffered logs to all destinations, and terminating.

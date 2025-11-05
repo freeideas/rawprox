@@ -14,8 +14,8 @@ if sys.stdout.encoding != 'utf-8':
     sys.stderr.reconfigure(encoding='utf-8')
 
 def cleanup():
-    """Delete reports, tmp, and workQ directories."""
-    dirs_to_delete = ['./reports', './tmp', './workQ']
+    """Delete reports and tmp directories."""
+    dirs_to_delete = ['./reports', './tmp']
 
     for dir_path in dirs_to_delete:
         path = Path(dir_path)

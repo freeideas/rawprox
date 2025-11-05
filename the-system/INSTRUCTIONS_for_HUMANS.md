@@ -13,11 +13,6 @@ Transform README documentation into working, tested software through two AI-driv
    - Edit `./the-system/scripts/prompt_agentic_coder.py`
    - Set the command for your AI agent (Claude Code, Aider, etc.)
 
-3. **Start the task watcher** (leave running in separate terminal)
-   ```bash
-   uv run --script ./the-system/scripts/task_watcher.py
-   ```
-
 ---
 
 ## Phase 1: Requirements Generation

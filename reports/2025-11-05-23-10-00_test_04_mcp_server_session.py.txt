@@ -1,0 +1,7 @@
+test_04_mcp_server_session.py FAIL
+Testing MCP server session flow...
+✓ $REQ_MCP_001, $REQ_MCP_003, $REQ_MCP_004, $REQ_MCP_021, $REQ_MCP_024: MCP server started with explicit port, ready event emitted to stdout with endpoint URL
+✓ $REQ_MCP_005, $REQ_MCP_006: RawProx runs with --mcp-port only, no help text shown
+
+✗ Test failed: Response should have result field
+Installed 5 packages in 6ms

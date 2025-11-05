@@ -88,7 +88,7 @@ When using `--mcp-port`, the server will print the MCP endpoint URL on startup. 
 - Network I/O is never blocked by logging -- if logging can't keep up, RawProx buffers in memory
 - If a port is already in use, RawProx will show an error to STDERR and exit with a non-zero status code
 - If a log directory is specified without port rules, RawProx will show an error to STDERR and exit with a non-zero status code
-- Use `--mcp-port` for runtime control without restarting the process
+- If a --filename-format is specified but no @DIRECTORY, RawProx will show an error to STDERR and exit with a non-zero status code, because STDOUT has no filename to format.
 - RawProx runs if given `--mcp-port` or port rules (or both). It only shows help and exits when given neither.
 
 ## Documentation

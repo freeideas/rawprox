@@ -1,0 +1,3 @@
+test_04_mcp_port_enablement.py PASS
+✓ $REQ_PORT_001A: RawProx accepts --mcp-port argument and starts successfully
+✓ Basic --mcp-port argument test passed

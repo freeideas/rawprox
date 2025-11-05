@@ -52,8 +52,3 @@ Port rules added dynamically via MCP participate in active logging destinations.
 
 When port rule is successfully removed, RawProx returns success response.
 
-## $REQ_PORT_SHUTDOWN_001: Application Shutdown
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
-
-When RawProx is terminated (via shutdown tool or process termination), the application exits the process.

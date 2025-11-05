@@ -44,6 +44,8 @@ result = subprocess.run(['uv', 'run', '--script', './the-system/scripts/prompt_a
 assert 'VERDICT: PASS' in result.stdout  # $REQ_ARCH_001
 ```
 
+Whenever you create or update these tests, aim to keep each run under a minute; if the script exceeds that, split the checks across multiple test files.
+
 ### 3. Limitation/Capability (informational, no test needed)
 - "TCP only" / "No UDP support"
 - "Windows only"

@@ -25,7 +25,7 @@ os.chdir(project_root)
 reports_dir = Path('./reports')
 reports_dir.mkdir(exist_ok=True)
 
-def run_command(cmd, description, capture_output=False, test_filename=None):
+def run_command(cmd, description, capture_output=False, test_filename=None, timeout=3600):
     """Run a command and return exit code, optionally capturing output."""
     print(f"\n{'=' * 60}")
     print(f"{description}")
@@ -37,13 +37,28 @@ def run_command(cmd, description, capture_output=False, test_filename=None):
     else:
         cmd_list = cmd
 
-    if capture_output:
-        result = subprocess.run(cmd_list, shell=False, timeout=3600,
-                              capture_output=True, text=True)
-        return result.returncode, result.stdout + result.stderr
-    else:
-        result = subprocess.run(cmd_list, shell=False, timeout=3600)
-        return result.returncode
+    try:
+        if capture_output:
+            result = subprocess.run(
+                cmd_list,
+                shell=False,
+                timeout=timeout,
+                capture_output=True,
+                text=True,
+            )
+            return result.returncode, result.stdout + result.stderr
+        else:
+            result = subprocess.run(cmd_list, shell=False, timeout=timeout)
+            return result.returncode
+    except subprocess.TimeoutExpired as exc:
+        timeout_message = f"\nCommand timed out after {timeout} seconds\n"
+        if capture_output:
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+            output = stdout + stderr + timeout_message
+            return 124, output
+        print(timeout_message)
+        return 124
 
 def write_report(test_filename, exit_code, output):
     """Write a timestamped report to the reports directory."""
@@ -59,6 +74,9 @@ def write_report(test_filename, exit_code, output):
     with open(report_path, 'w') as f:
         f.write(f"{test_name} {status}\n")
         f.write(output)
+
+    # Print report file path for parent scripts to read
+    print(f"report file: {report_path}")
 
     return report_path
 
@@ -110,7 +128,13 @@ def main():
     # Step 3: Run tests directly (no pytest)
     if args.test_file:
         # Run single test file
-        exit_code, output = run_command(f'uv run --script {test_target}', f'Running test: {test_target}', capture_output=True, test_filename=test_target)
+        exit_code, output = run_command(
+            f'uv run --script {test_target}',
+            f'Running test: {test_target}',
+            capture_output=True,
+            test_filename=test_target,
+            timeout=120,
+        )
         print(output)  # Print output to console
         write_report(test_target, exit_code, output)
     else:
@@ -123,7 +147,13 @@ def main():
 
         failed = []
         for test_file in test_files:
-            exit_code, output = run_command(f'uv run --script {test_file}', f'Running test: {test_file}', capture_output=True, test_filename=test_file)
+            exit_code, output = run_command(
+                f'uv run --script {test_file}',
+                f'Running test: {test_file}',
+                capture_output=True,
+                test_filename=test_file,
+                timeout=120,
+            )
             print(output)  # Print output to console
             report_path = write_report(test_file, exit_code, output)
             print(f"Report written to: {report_path}")

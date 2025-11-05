@@ -58,6 +58,12 @@ Only one directory can be specified on the command line - all port rules log to 
 
 If no directory is specified, logs go to STDOUT only.
 
+## $REQ_CMD_016: Filename Format Requires Directory
+
+**Source:** ./readme/COMMAND-LINE_USAGE.md (Section: "Quick Tips")
+
+If --filename-format is provided without an @DIRECTORY, RawProx shows an error to STDERR and exits with a non-zero status code, because STDOUT has no filename to format.
+
 ## $REQ_CMD_014: Directory Without Port Rules Shows Error
 
 **Source:** ./README.md (Section: "Quick Start")

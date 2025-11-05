@@ -41,6 +41,10 @@ Ensure all reasonably testable behaviors from READMEs are represented in `./reqs
 - Background information
 - Installation instructions (unless they specify behavior)
 - General descriptions without reasonably testable outcomes
+- **Build scripts or build processes** -- customer receives built executable from `./release/`, not source
+- **Development prerequisites** (.NET SDK, compilers, Java, Python, etc.)
+- **How to compile or package** -- build instructions are not runtime requirements
+- **Development tooling or infrastructure** -- IDE setup, CI/CD pipelines, debugging tools
 - **Explanatory text about design trade-offs** ("we chose X over Y because...")
 - **Illustrative examples of consequences** (e.g., "it will crash with OOM instead of blocking" is illustrating non-blocking behavior, not requiring OOM)
 - **Natural consequences of other requirements** (e.g., OOM from unbounded buffering, data loss on crash)

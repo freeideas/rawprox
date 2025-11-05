@@ -60,6 +60,7 @@ This is not about being pedantic -- it's about clarity. A codebase with many foc
 
 ### Tests
 - Test checks behavior. If part of a test is not supported by the requirements, delete the assertion or entire test
+- Keep runtime short (<1 minute when feasible); if a test file runs longer, break it into focused smaller tests
 - Test is flaky, slow (>5s), or has reliability issues? Rewrite from scratch
 - Complex test setup? Something is wrong. Rewrite the code and/or the test.
 - Requirements changed? Rewrite tests to match -- don't try to adapt old tests

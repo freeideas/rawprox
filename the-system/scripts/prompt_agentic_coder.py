@@ -4,6 +4,8 @@
 # dependencies = []
 # ///
 
+DEFAULT_AGENT = "codex"
+
 """
 Wrapper for agentic coder - delegates to the configured agent CLI.
 
@@ -89,7 +91,7 @@ def _process_claude_output(raw_stdout):
     return result_text, aggregated_outputs
 
 
-def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent="claude"):
+def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AGENT):
     """
     Run a prompt by delegating to the configured agent CLI using JSON output.
 
@@ -123,7 +125,8 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent="claude"):
         agent_cmd = [
             "codex", "exec", "-",
             "--json",
-            "--skip-git-repo-check"
+            "--skip-git-repo-check",
+            "--dangerously-bypass-approvals-and-sandbox"
         ]
         model_override = os.environ.get("PROMPT_AGENTIC_MODEL")
         if model_override:
@@ -134,6 +137,8 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent="claude"):
             "--print",
             "--output-format=json"
         ]
+        model_override = os.environ.get("PROMPT_AGENTIC_MODEL")
+        agent_cmd.extend(["--model", model_override if model_override else "opus"])
 
     print(f"DEBUG [prompt_agentic_coder]: Launching {agent} CLI (timeout: {timeout}s)...", file=sys.stderr, flush=True)
 
@@ -293,7 +298,7 @@ def main():
     parser.add_argument(
         "--agent",
         choices=sorted(SUPPORTED_AGENTS),
-        default="claude",
+        default=DEFAULT_AGENT,
         help="Agent CLI to use for prompts (default: claude)"
     )
     args = parser.parse_args()

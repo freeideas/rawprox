@@ -1,0 +1,17 @@
+test_04_mcp_server_session.py PASS
+Testing MCP server session flow...
+✓ $REQ_MCP_001, $REQ_MCP_003, $REQ_MCP_004, $REQ_MCP_021, $REQ_MCP_024: MCP server started with explicit port, ready event emitted to stdout with endpoint URL
+✓ $REQ_MCP_005, $REQ_MCP_006: RawProx runs with --mcp-port only, no help text shown
+✓ $REQ_MCP_007, $REQ_MCP_008, $REQ_MCP_019, $REQ_MCP_022, $REQ_MCP_025, $REQ_MCP_026, $REQ_MCP_027, $REQ_MCP_028: MCP protocol over HTTP with initialize method
+✓ $REQ_MCP_009, $REQ_MCP_029, $REQ_MCP_034, $REQ_MCP_035, $REQ_MCP_036, $REQ_MCP_037, $REQ_MCP_038, $REQ_MCP_039: Tools list with all 5 tools and correct schemas
+✓ $REQ_MCP_010, $REQ_MCP_014, $REQ_MCP_017, $REQ_MCP_030, $REQ_MCP_031: Tools call method with add-port-rule
+✓ $REQ_MCP_012: Start logging tool with directory and filename_format
+✓ $REQ_MCP_013: Stop logging tool
+✓ $REQ_MCP_015, $REQ_MCP_032: Remove port rule tool
+✓ $REQ_MCP_011: JSON-RPC error handling
+✓ $REQ_MCP_016, $REQ_MCP_020, $REQ_MCP_033: Shutdown tool terminates the application
+✓ $REQ_MCP_002: System-chosen port (got port 44803)
+✓ $REQ_MCP_018: MCP server with port rules
+✓ $REQ_MCP_023: Immediate logging with --mcp-port and @directory
+
+✓ All MCP server session tests passed

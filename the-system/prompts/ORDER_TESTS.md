@@ -34,6 +34,8 @@ Analyze all test files in `./tests/failing/` and `./tests/passing/` and order th
 
 Assign appropriate numeric prefixes. Rename files in both `./tests/failing/` and `./tests/passing/`.
 
+Use a single two-digit prefix per file (e.g., `test_01_command-line.py`), not multiple numeric segments like `test_01_01_command-line.py`.
+
 Example:
 ```
 test_startup.py → test_01_startup.py

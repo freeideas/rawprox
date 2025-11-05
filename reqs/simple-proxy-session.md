@@ -16,18 +16,6 @@ RawProx runs as a single executable (`rawprox.exe`) without external dependencie
 
 The executable is named `rawprox.exe` on all platforms for consistency. Linux ignores the extension, while Windows requires it.
 
-## $REQ_SIMPLE_027: AOT Compilation
-
-**Source:** ./README.md (Section: "Runtime Requirements", "Build Artifacts")
-
-The binary is AOT-compiled using .NET 8 or above.
-
-## $REQ_SIMPLE_028: Build Artifacts Content
-
-**Source:** ./README.md (Section: "Build Artifacts")
-
-After building, the ./release/ directory contains only the single executable rawprox.exe with no debug files (.pdb) or runtime files (.dll).
-
 ## $REQ_SIMPLE_002: Accept Port Rule Argument
 
 **Source:** ./README.md (Section: "Quick Start"), ./readme/COMMAND-LINE_USAGE.md (Section: "Arguments")

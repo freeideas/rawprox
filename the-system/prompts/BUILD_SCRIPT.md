@@ -38,6 +38,7 @@ README.md is missing:
 **Create `./tests/build.py`:**
 
 - Use uvrun shebang and script metadata
+- First delete any existing artifacts in `./release/` that the script will recreate, so failed builds never leave stale files behind
 - Compile/package code according to README.md
 - Put all build artifacts in `./release/`
 - Exit 0 on success, non-zero on failure

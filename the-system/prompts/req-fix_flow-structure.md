@@ -70,6 +70,8 @@ Each flow document must tell a complete, testable story. Include startup/shutdow
 When completing flows, **only add requirements documented in READMEs**.
 
 **Skip (do NOT add these when completing sequences):**
+- **Build scripts or build processes** -- customer receives built executable, not source
+- **Development prerequisites** (compilers, SDKs, IDEs, etc.)
 - **OS/runtime behavior** (e.g., "Process terminates on SIGKILL", "Connections close when process exits")
 - **Natural consequences** (e.g., "OOM crash when memory exhausted", "Data loss on crash")
 - **Explanatory text about design trade-offs** ("We chose X over Y because...")

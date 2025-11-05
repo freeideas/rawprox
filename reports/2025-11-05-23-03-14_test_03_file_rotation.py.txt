@@ -1,0 +1,14 @@
+test_03_file_rotation.py FAIL
+[STEP] Starting file rotation test harness (30-second timeout enforced)
+[DEBUG] Working directory: /home/ace/prjx/rawprox
+[DEBUG] Expected release dir: release
+[DEBUG] Release dir exists: True
+[DEBUG] rawprox.exe exists: True
+[DEBUG] Release directory structure validated
+[DEBUG] Using test directory: tmp/test_file_rotation
+[DEBUG] Log directories prepared
+[DEBUG] Assigned proxy port: 54421
+[STEP] Validating missing directory handling for --filename-format
+[DEBUG] Running validation with invalid format (no @DIRECTORY): 40157:example.com:80
+[DEBUG] subprocess.run timed out - rawprox did not exit within 5 seconds
+✗ Test failed: Process should exit immediately when --filename-format lacks @DIRECTORY

@@ -2,25 +2,7 @@
 
 **Source:** ./README.md, ./readme/LOG_FORMAT.md, ./readme/MCP_SERVER.md, ./readme/PERFORMANCE.md
 
-Start RawProx, control logging destinations dynamically at runtime, and shutdown.
-
-## $REQ_LOG_STARTUP_001: Single Executable
-
-**Source:** ./README.md (Section: "Runtime Requirements")
-
-RawProx runs as a single executable (`rawprox.exe`) without external dependencies.
-
-## $REQ_LOG_STARTUP_002: Accept MCP Port Argument
-
-**Source:** ./README.md (Section: "Quick Start"), ./readme/COMMAND-LINE_USAGE.md (Section: "Arguments")
-
-RawProx accepts `--mcp-port PORT` argument to enable MCP server for dynamic runtime control over HTTP.
-
-## $REQ_LOG_STARTUP_003: MCP Ready Event
-
-**Source:** ./readme/LOG_FORMAT.md (Section: "MCP Server Events"), ./readme/MCP_SERVER.md (Section: "Starting the MCP Server")
-
-When using --mcp-port, RawProx emits an NDJSON event to stdout with time, event type "mcp-ready", and endpoint URL.
+Control logging destinations dynamically at runtime.
 
 ## $REQ_LOG_001: Start Logging Event
 
@@ -130,8 +112,3 @@ The start-logging tool accepts directory argument (string or null for STDOUT) an
 
 The stop-logging tool accepts optional directory argument (string for specific directory, null for STDOUT, or omitted to stop all).
 
-## $REQ_LOG_SHUTDOWN_001: Application Shutdown
-
-**Source:** ./readme/MCP_SERVER.md (Section: "Tool Reference")
-
-When RawProx is terminated (via shutdown tool or process termination), the application exits the process.

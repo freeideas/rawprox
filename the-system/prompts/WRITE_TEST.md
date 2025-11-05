@@ -18,6 +18,8 @@ Write tests for requirements that have no test coverage.
 
 ## Test Structure
 
+**Runtime target:** Keep each test under one minute when possible. If a test file consistently takes longer, split the flow into multiple test files so each stays quick.
+
 ### One Flow = One Test File
 
 ```
@@ -113,6 +115,15 @@ Create one test function that:
 
 **Critical:** Tests MUST NOT leave processes running or resources locked.
 
+**Debugging hangs:** Add lots of `print()` statements describing exactly what the test is doing at each step. Unexplained hangs are common bugs -- print statements are your best debugging tool. Include timestamps, step names, and expected behavior:
+```python
+print("Starting application...")
+process = subprocess.Popen(['./release/app.exe'])
+print(f"Process started with PID {process.pid}, waiting for startup...")
+time.sleep(2)
+print("Checking if process is still alive...")
+```
+
 **Windows warning:** Always use `process.kill()` for cleanup. Never use `terminate()`, `send_signal()`, or `CTRL_C_EVENT` -- on Windows these propagate to the parent process and kill the test runner.
 
 ### Step 4: Tag Each Assertion
@@ -124,6 +135,13 @@ assert condition, "message"  # $REQ_STARTUP_001
 **Format:** `$REQ_` followed by any combination of letters, digits, underscores, hyphens
 
 This enables traceability from requirements to tests.
+
+**🔴 CRITICAL:** Every requirement you test MUST have a `# $REQ_ID` tag on its assertion/verification line in the actual test code. The build indexer (`build-req-index.py`) scans the test file for these `$REQ_*` patterns to mark requirements as tested. If a requirement is missing a tag in the code:
+- It won't be marked as tested in the database
+- The system will ask to write a test for it again
+- You'll end up duplicating work
+
+**Do not rely on mentioning requirements in your summary.** Only tags in the actual code count.
 
 ---
 
@@ -209,7 +227,49 @@ Check for: memory buffer, async disk writes, immediate return from log calls"""
 
 ---
 
+## Build Artifact Checks
+
+For requirements about **build artifacts** (what files exist in `./release/`), use simple Python code to check the directory. Do NOT create AI prompts for this.
+
+**Simple check example:**
+```python
+from pathlib import Path
+
+# Verify ./release/ contains expected executable
+exe_path = Path('./release/rawprox.exe')
+assert exe_path.exists(), "rawprox.exe missing from ./release/"  # $REQ_SIMPLE_001
+assert exe_path.is_file(), "rawprox.exe must be a file"  # $REQ_SIMPLE_001
+
+# Verify no debug/runtime files
+release_files = list(Path('./release/').iterdir())
+for f in release_files:
+    assert not f.name.endswith('.pdb'), "No .pdb debug files"  # $REQ_ARTIFACT_001
+    assert not f.name.endswith('.dll'), "No .dll runtime files"  # $REQ_ARTIFACT_001
+```
+
+**DO NOT create AI prompts for build artifact validation.** Just use `Path()` and `assert` statements.
+
+**However, skip these build-related requirements entirely:**
+- Compilation or build process (e.g., "Must be compiled with .NET 8", "AOT compilation")
+- Project configuration (.csproj, build files)
+- Development prerequisites (compilers, SDKs)
+- Build scripts or build tooling
+
+These should not be in the flow files (see @the-system/prompts/WRITE_REQS.md).
+
+---
+
 ## Important Notes
+
+### 🔴 Tag Requirements in Code (Not Just in Summary)
+
+This is the #1 source of duplicate test requests. The build indexer scans test files for `$REQ_*` patterns in the actual code:
+
+- ✅ `assert foo == bar  # $REQ_LOG_001` — requirement marked as tested
+- ❌ "This test covers $REQ_LOG_001" in your summary — requirement NOT marked as tested
+- ❌ `assert foo == bar  # Tests $REQ_LOG_001` — wrong format, won't be detected
+
+Every requirement you test must have an inline comment tag: `# $REQ_ID` (exactly that format, on the assertion line).
 
 ### Test All Requirements in Flow
 

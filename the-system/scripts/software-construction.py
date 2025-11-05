@@ -251,36 +251,40 @@ def handle_single_test_until_passes(test_file):
         print(f"→ Running {test_name}...")
         # Use uv run --script to run test.py (same pattern that works in reqs-gen.py)
         test_cmd = ['uv', 'run', '--script', './the-system/scripts/test.py', test_file]
-        # Write output to file instead of capturing in memory (avoid Windows subprocess issues)
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False, suffix='.txt') as f:
-            temp_output_file = f.name
-
-        test_output = ""
+        # Capture output to find the report file path
         test_result = None
+        test_output = ""
+        report_file_path = None
+
         try:
-            # Run test and capture output to file
+            # Run test and capture output to find report file
             try:
-                with open(temp_output_file, 'w', encoding='utf-8') as f:
-                    test_result = subprocess.run(test_cmd, stdout=f, stderr=subprocess.STDOUT, text=True, timeout=3600)
+                result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=3600)
+                test_result = result
+                captured_output = result.stdout + result.stderr
             except subprocess.TimeoutExpired:
                 # Test timed out -- create a result object indicating timeout
                 test_result = type('obj', (object,), {'returncode': -1})()
-                # Append timeout message to output file
-                with open(temp_output_file, 'a', encoding='utf-8') as f:
-                    f.write(f"\n\n[ERROR] Test execution timed out after 3600 seconds\n")
+                captured_output = "[ERROR] Test execution timed out after 3600 seconds\n"
 
-            # Read the output (file is now closed)
-            with open(temp_output_file, 'r', encoding='utf-8') as f:
-                test_output = f.read()
-        finally:
-            # Clean up temp file (now it's definitely closed)
-            if os.path.exists(temp_output_file):
-                try:
-                    os.unlink(temp_output_file)
-                except PermissionError:
-                    # File still in use on Windows, skip deletion (it's in temp dir anyway)
-                    pass
+            # Look for "report file: " line in captured output
+            for line in captured_output.splitlines():
+                if line.startswith("report file: "):
+                    report_file_path = line[len("report file: "):].strip()
+                    break
+
+            # Read the actual test report (clean, without build output)
+            if report_file_path and os.path.exists(report_file_path):
+                with open(report_file_path, 'r', encoding='utf-8') as f:
+                    test_output = f.read()
+            else:
+                # Fallback to captured output if report file not found
+                test_output = captured_output
+
+        except Exception as e:
+            test_result = type('obj', (object,), {'returncode': -1})()
+            test_output = f"Error running test: {e}\n"
+
         print(f"← Test completed with exit code: {test_result.returncode}\n")
 
         # If test passes, move it to passing and return

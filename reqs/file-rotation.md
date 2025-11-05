@@ -2,19 +2,7 @@
 
 **Source:** ./README.md, ./readme/COMMAND-LINE_USAGE.md, ./readme/LOG_FORMAT.md, ./readme/PERFORMANCE.md
 
-Start RawProx with file logging, write to time-rotated files with configurable naming patterns, and shutdown.
-
-## $REQ_ROT_STARTUP_001: Single Executable
-
-**Source:** ./README.md (Section: "Runtime Requirements")
-
-RawProx runs as a single executable (`rawprox.exe`) without external dependencies.
-
-## $REQ_ROT_STARTUP_002: Accept Port Rule Argument
-
-**Source:** ./README.md (Section: "Quick Start"), ./readme/COMMAND-LINE_USAGE.md (Section: "Arguments")
-
-RawProx accepts port rule arguments in format `LOCAL_PORT:TARGET_HOST:TARGET_PORT`.
+Write to time-rotated files with configurable naming patterns.
 
 ## $REQ_ROT_001A: Accept Log Directory Argument
 
@@ -33,6 +21,12 @@ RawProx supports automatic file rotation (hourly, daily, per-minute, etc.).
 **Source:** ./readme/COMMAND-LINE_USAGE.md (Section: "Arguments")
 
 RawProx accepts --filename-format argument to set log file naming pattern using strftime format (default: rawprox_%Y-%m-%d-%H.ndjson).
+
+## $REQ_ROT_015: Directory Required for Filename Formatting
+
+**Source:** ./readme/COMMAND-LINE_USAGE.md (Section: "Quick Tips")
+
+If --filename-format is provided without an @DIRECTORY destination, RawProx shows an error to STDERR and exits with a non-zero status code.
 
 ## $REQ_ROT_004: Hourly Rotation Default
 

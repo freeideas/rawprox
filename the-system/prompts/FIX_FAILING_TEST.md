@@ -48,9 +48,20 @@ As needed, you can use `uv run --script ./the-system/scripts/reqtrace.py $REQ_ID
 Create/modify files in `./code/` to make test pass.
 
 **Code structure is flexible:**
+- Keep fixes fast to verify: target each test run to finish in under a minute; if the failing test suite is slower, split the underlying tests so each file stays quick.
 - Organize however makes sense
 - Refactor freely
 - Follow @the-system/prompts/PHILOSOPHY.md
+
+**Debugging hangs in failing tests:** If a test hangs without clear output, add extensive `print()` statements throughout the test to show exactly what it's doing. Print statements should describe:
+- What step is starting and expected outcome
+- Key variable values, process IDs, port numbers
+- Before/after state checks
+- Timeout boundaries
+
+Example: `print(f"Waiting for process {pid} to bind to port {port}, timeout in {timeout}s")`
+
+This makes debugging unexplained hangs much easier when tests get stuck.
 
 **Code organization guidance:**
 - **Consider creating focused files for each requirement or requirement group**

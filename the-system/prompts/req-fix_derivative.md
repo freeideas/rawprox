@@ -85,6 +85,7 @@ README sections often explain **why** design decisions were made and what the tr
 - **Startup/shutdown steps needed for flow completeness** (see exception below)
 
 **DO remove requirements that are:**
+- Build processes or development infrastructure
 - Consequences of other requirements
 - OS/language/runtime behavior
 - Explanatory text about design trade-offs

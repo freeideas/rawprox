@@ -8,7 +8,7 @@ Check if requirements in `./reqs/` accurately reflect the README documentation.
 
 ## THE SEVEN RULES FOR REQUIREMENTS
 
-1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
+1. **Complete Coverage** -- Every reasonably testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
 3. **No Overspecification** -- Requirements must not be more specific than READMEs
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
@@ -36,11 +36,11 @@ A requirement is inaccurate when it misrepresents what the README says.
 **Inaccurate req:** "Must crash with OOM when buffer fills"
 **Problem:** Example was illustrating non-blocking behavior, not requiring OOM crash
 
-### 3. Confusing Constraints with Behavior
+### 3. Adding Error Handling Not in README
 
-**README:** "Port number must be between 1-65535"
-**Inaccurate req:** "Must validate port is between 1-65535"
-**Problem:** Added validation requirement not stated in README (unless README explicitly says to validate)
+**README:** "Accepts one directory argument"
+**Inaccurate req:** "Must exit with error code 1 if multiple directories provided"
+**Problem:** Added error handling not stated in README -- focus on happy path unless README explicitly documents error behavior
 
 ### 4. Requirements That Contradict Each Other
 

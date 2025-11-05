@@ -6,7 +6,7 @@ Ensure flow documents in `./reqs/` tell complete use-case stories from start to 
 
 ## THE SEVEN RULES FOR REQUIREMENTS
 
-1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
+1. **Complete Coverage** -- Every reasonably testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
 3. **No Overspecification** -- Requirements must not be more specific than READMEs
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
@@ -18,47 +18,46 @@ Ensure flow documents in `./reqs/` tell complete use-case stories from start to 
 
 ## Good Flow Structure
 
-Each flow document must tell a complete story from application start to shutdown, testable end-to-end.
+Each flow document must tell a complete, testable story. Include startup/shutdown requirements ONLY if there are actual requirements about startup or shutdown behavior.
 
 **Organization:**
 - Flow documents can be organized by use case OR technical category
-- **What matters:** Each document contains a complete sequence from app start to app exit
+- **What matters:** Each document contains a logical, testable sequence
 
 **Good examples:**
 
 *Use-case organization:*
-- `startup-to-shutdown.md` -- Start server, verify ready, use it, shutdown
-- `install.md` -- Install from scratch to ready state
+- `startup-to-shutdown.md` -- Explicit startup/shutdown requirements (because that's what it's about)
+- `install.md` -- Installation steps from scratch to ready state
 - `client-usage.md` -- Connect, perform operations, disconnect
 
 *Technical category organization (also valid):*
-- `network-requirements.md` -- Start app, network setup, network operations, shutdown
-- `logging-requirements.md` -- Start app, logging initialization, log operations, shutdown
-- `api-endpoints.md` -- Start app, API setup, API usage, shutdown
+- `network-requirements.md` -- Network setup, network operations (startup/shutdown implied)
+- `logging-requirements.md` -- Log operations, log formatting (startup/shutdown implied)
+- `api-endpoints.md` -- API usage, request/response handling (startup/shutdown implied)
 
-**Bad (incomplete sequences):**
-- `network-requirements.md` -- Only network aspects without start/shutdown steps
-- `logging-requirements.md` -- Only logging operations, missing app lifecycle
-- `api-endpoints.md` -- Only API definitions, no executable flow
+**Bad (incomplete or over-specified):**
+- `logging-requirements.md` -- Adding generic "app starts" and "app stops" when there are no requirements about startup/shutdown
+- `network-requirements.md` -- Missing the actual network operation requirements
+- `api-endpoints.md` -- Only API definitions without usage requirements
 
 ---
 
 ## What to Check
 
 **Completeness:**
-- Clear beginning state (startup steps)
-- Clear ending/shutdown state (shutdown steps)
-- No gaps in sequence
-- **Note:** Startup/shutdown steps may be similar across multiple flows - that's expected and correct. Each flow needs its own complete sequence even if the startup/shutdown requirements look similar.
+- No gaps in the logical sequence
+- If startup/shutdown have observable requirements, include them
+- If no startup/shutdown requirements exist, don't add generic ones
 
 **Testability:**
-- Can execute as single test
-- End-to-end testable
-- Independently executable (doesn't depend on other flows)
+- Can be tested (unit, integration, or end-to-end depending on scope)
+- Independently verifiable (doesn't depend on other flows)
+- Has observable behavior
 
 **Organization:**
 - By use case OR technical category (both acceptable)
-- Must tell a complete story from app start to exit, not just list features
+- Must describe actual requirements, not generic lifecycle steps
 
 **Sequence:**
 - Steps follow logical order
@@ -90,13 +89,14 @@ When completing flows, **only add requirements documented in READMEs**.
 
 1. Read `./README.md` and all files in `./readme/`
 2. Read all flow files in `./reqs/`
-3. Verify each flow contains a complete sequence from app start to app exit
+3. Verify each flow contains a logical, testable sequence
 4. **Focus on significant structural problems** -- ignore minor ordering issues; only fix major structure gaps
-5. **Fix by adding** missing startup/shutdown steps documented in READMEs to make flows complete
-6. **Fix by reordering** steps to follow logical sequence (start → operations → exit)
-7. **Fix by splitting/merging** flows to make them independently testable
+5. **Fix by adding** missing requirements that are documented in READMEs
+6. **Fix by removing** generic startup/shutdown steps that have no actual requirements
+7. **Fix by reordering** steps to follow logical sequence
+8. **Fix by splitting/merging** flows to make them independently testable
 
-**Important:** It's normal and expected for multiple flows to have similar startup/shutdown steps. Don't avoid adding them just because they appear in other flows - each flow must be independently testable.
+**Important:** Only include startup/shutdown requirements if the READMEs document specific observable behavior about startup or shutdown. Don't add generic "app starts" and "app stops" steps.
 
 ---
 
@@ -106,8 +106,8 @@ When completing flows, **only add requirements documented in READMEs**.
 
 **If significant issues found:** For each change, list:
 - File: (which file was edited)
-- Before: (the incomplete flow structure, describe what was missing)
-- After: (the complete flow structure, what was added/reordered)
-- Why: (what structural problem was fixed)
+- Before: (the problematic flow structure)
+- After: (the corrected flow structure)
+- Why: (what structural problem was fixed - missing requirements, unnecessary generic steps, illogical ordering, etc.)
 
-**If no significant issues found:** State that all flows contain complete sequences from app start to exit.
+**If no significant issues found:** State that all flows contain logical, testable sequences appropriate to their scope.

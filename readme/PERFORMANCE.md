@@ -7,25 +7,21 @@ RawProx is designed to capture network traffic at full speed without blocking or
 **Network communication is king:**
 - Proxied connections maintain full throughput regardless of logging activity
 - Network data forwarding is never slowed down by file write operations
-- If logging can't keep up → buffer in memory
-- If buffer fills → crash with OOM (intentional)
+- Log messages will be buffered in memory until they are written to disk
 
 **This means:**
-- ✅ No backpressure on proxied connections
 - ✅ Captures traffic at line rate
-- ✅ Predictable failure mode (OOM crash, not slowdown)
-- ❌ Data loss on OOM crash (last unflushed buffer)
 
 ## Memory Buffering Strategy
 
 **Log events appear in files only after flush intervals, not immediately:**
 
 1. Network events arrive (connection open/close, data transfer)
-2. Events serialized to JSON and appended to memory buffer
-3. Buffer flushes to disk at intervals (configurable via --flush-millis)
-4. If buffer grows faster than flush rate → OOM
+2. Events serialized to JSON and appended to memory buffer (one buffer per destination file)
+3. Buffers flush to disk at intervals (configurable via --flush-millis)
+4. If buffers grow faster than flush rate → OOM
 
-**Buffer grows when:**
+**Buffers grow when:**
 - Network traffic rate exceeds disk write rate
 - Disk I/O is slow (network filesystem, slow disk)
 - Flush interval is too long
@@ -35,10 +31,12 @@ RawProx is designed to capture network traffic at full speed without blocking or
 **Files are written in batches, not per-event:**
 
 **Write cycle:**
-1. Accumulate events in memory buffer
+1. Accumulate events in memory buffer (one buffer per time period/filename)
 2. Wait for flush interval (default: 2000ms)
 3. Open file → write entire buffer → close file
 4. Clear buffer, repeat
+
+**Note:** When using time-rotated filenames (via `--filename-format`), there may be multiple buffers active simultaneously - one for each time period. For example, with hourly rotation, events at 14:59 go into the buffer for hour 14, while events at 15:01 go into the buffer for hour 15. Each buffer is flushed to its corresponding file with a single write operation.
 
 **Why open-write-close each flush?**
 - Minimizes system calls to approximately one write per interval

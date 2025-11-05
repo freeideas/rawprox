@@ -6,14 +6,15 @@ Create testable requirement flows in `./reqs/` based on use-case documentation i
 
 ---
 
-## THE SIX RULES FOR REQUIREMENTS
+## THE SEVEN RULES FOR REQUIREMENTS
 
-1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
+1. **Complete Coverage** -- Every reasonably testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
 3. **No Overspecification** -- Requirements must not be more specific than READMEs
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
 5. **Source Attribution** -- Every $REQ_ID cites: `**Source:** ./readme/FILE.md (Section: "Name")`
 6. **Unique IDs** -- Each $REQ_ID appears exactly once. Format: `$REQ_` followed by letters/digits/underscores/hyphens (e.g., $REQ_STARTUP_001)
+7. **Reasonably Testable** -- Requirements must have observable behavior that can be verified
 
 ---
 
@@ -68,20 +69,25 @@ Server must exit gracefully when receiving SIGTERM.
 ## What to Include
 
 **DO write requirements for delivered software:**
-- Runtime behavior of executable
-- Command-line arguments and options
+- Runtime behavior of executable with correct inputs (happy paths)
+- Command-line arguments and options (what they do, not what happens with wrong values)
 - Network behavior, logging, file I/O
-- Error handling and edge cases
+- Error handling **explicitly documented in README**
 - Observable outputs and responses
-- Performance characteristics
+- Architectural constraints (e.g., "use non-blocking I/O")
 
-**DO NOT write requirements for build tooling:**
+**DO NOT write requirements for:**
 - Build scripts or build processes
 - Development prerequisites (.NET SDK, compilers)
 - How to compile or package
 - Development tooling or infrastructure
+- **Wrong inputs/edge cases** (unless README explicitly documents error behavior)
+- **Negative capabilities** (e.g., "does not support UDP" - absence of feature)
+- **Performance/load characteristics** (e.g., "handles 10k requests/sec" - hard to test reliably)
+- **Natural consequences** (e.g., OOM crashes, data loss on process kill)
+- **OS/runtime behavior** (e.g., process termination on SIGKILL)
 
-**Why?** Customers receive built executable from `./release/`. They don't care about build scripts or SDKs. Requirements focus on what the delivered product does.
+**Why?** Customers receive built executable from `./release/`. Requirements focus on what the delivered product does with correct usage, not exhaustive error testing.
 
 ---
 
@@ -93,17 +99,20 @@ Read thoroughly:
 - `./README.md`
 - All files in `./readme/`
 
-Identify testable behaviors **of delivered software:**
-- Actions users take with executable
-- System responses
+Identify reasonably testable behaviors **of delivered software:**
+- Actions users take with executable (with correct inputs)
+- System responses (to valid requests)
 - Observable outputs
-- Error conditions
+- Error conditions **explicitly documented in README**
 - Success criteria
 
 **Skip sections about:**
 - "Building from source"
 - "Development prerequisites"
 - Build/compilation instructions
+- Limitations stated as absences ("doesn't support X")
+- Performance/load claims ("handles 10k req/sec")
+- What happens with wrong inputs (unless README documents it)
 
 ### Step 2: Identify User Flows
 
@@ -139,19 +148,44 @@ For each requirement:
 - Specific enough to test
 - Not over-specified
 - Traceable to source
+- **Focused on happy paths** (correct usage, not wrong inputs)
+
+---
+
+## Critical Distinctions
+
+**Happy paths vs. error exhaustion:**
+- ✓ "Accepts one directory argument" → this IS a requirement (describes correct usage)
+- ✗ "Exit with error if two directories provided" → skip unless README explicitly documents this
+- ✓ "Port number is required" → this IS a requirement (describes correct usage)
+- ✗ "Show error if port missing" → skip unless README explicitly documents this error
+
+**Capabilities vs. absences:**
+- ✓ "Proxies TCP connections" → this IS a requirement (what it does)
+- ✗ "Does not support UDP" → skip (absence of feature, nothing to test)
+- ✓ "Returns error 'UDP not supported' if UDP attempted" → this IS a requirement IF README documents it
+
+**Architectural constraints vs. natural consequences:**
+- ✓ "Never block network I/O on disk writes" → this IS a requirement (architectural constraint)
+- ✗ "Will crash with OOM instead of blocking" → skip (natural consequence, not a feature)
+- ✓ "Buffer in memory when logging falls behind" → this IS a requirement (what system does)
+
+**Explicit error handling vs. implied validation:**
+- ✓ README says "If config file missing, exit with error 'CONFIG_NOT_FOUND'" → this IS a requirement
+- ✗ README says "Requires config file" without mentioning error → skip the error behavior
 
 ---
 
 ## Over-Specification Examples
 
 **Over-specified (WRONG):**
-- README: "Show error if port missing"
-- REQ: "Print `ERROR: PORT REQUIRED` to STDERR and exit with code -3"
-- **Problem:** Exact message, stream, and exit code not in README
+- README: "On startup, if config file is missing, show error and exit"
+- REQ: "Print `ERROR: CONFIG_NOT_FOUND` to STDERR with exit code -3 and log to Windows Event Viewer"
+- **Problem:** Exact message, stream, exit code, and Event Viewer logging not in README
 
 **Correctly specified (RIGHT):**
-- README: "Show error if port missing"
-- REQ: "Show error message if port number is missing and exit"
+- README: "On startup, if config file is missing, show error and exit"
+- REQ: "Show error message if config file is missing at startup and exit"
 
 **When to include details:**
 - README explicitly states them
@@ -165,6 +199,8 @@ For each requirement:
 - Performance numbers (unless specified)
 - Output streams (unless specified)
 - Specific exit codes (unless specified or necessary)
+- Wrong input handling (unless specified)
+- Edge case behavior (unless specified)
 
 ---
 

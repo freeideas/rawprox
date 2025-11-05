@@ -3,7 +3,7 @@
 ## Usage
 
 ```
-rawprox.exe [--mcp-port PORT] [--flush-millis MS] [--filename-format FORMAT] PORT_RULE... [LOG_DESTINATION...]
+rawprox.exe [--mcp-port PORT] [--flush-millis MS] [--filename-format FORMAT] PORT_RULE... [@LOG_DIRECTORY]
 ```
 
 ## Arguments
@@ -34,12 +34,13 @@ Examples:
   - `8080:example.com:80` -- Forward local port 8080 to example.com:80
   - `9000:api.example.com:443` -- Forward local port 9000 to api.example.com:443
 
-**LOG_DESTINATION**
+**LOG_DIRECTORY**
 Format: `@DIRECTORY`
 
 Log traffic to time-rotated files in the specified directory.
-You can specify multiple destinations to log to several directories simultaneously.
-If no destination is specified, logs go to STDOUT only.
+Only one directory can be specified on the command line - all port rules log to the same destination.
+For multiple log destinations, use `--mcp-port` mode (see MCP Server documentation).
+If no directory is specified, logs go to STDOUT only.
 
 Examples:
   - `@./logs` -- Log to ./logs/ directory
@@ -83,11 +84,12 @@ When using `--mcp-port`, the server will print the MCP endpoint URL on startup. 
 
 ## Quick Tips
 
-- Press **Ctrl-C** to stop RawProx gracefully
 - All logs use NDJSON (newline-delimited JSON) format
 - Network I/O is never blocked by logging -- if logging can't keep up, RawProx buffers in memory
-- If a port is already in use, RawProx will exit with an error
+- If a port is already in use, RawProx will show an error to STDERR and exit with a non-zero status code
+- If a log directory is specified without port rules, RawProx will show an error to STDERR and exit with a non-zero status code
 - Use `--mcp-port` for runtime control without restarting the process
+- RawProx runs if given `--mcp-port` or port rules (or both). It only shows help and exits when given neither.
 
 ## Documentation
 

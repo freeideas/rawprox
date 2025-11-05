@@ -6,7 +6,7 @@ Ensure all requirements in `./reqs/` have proper source attribution.
 
 ## THE SEVEN RULES FOR REQUIREMENTS
 
-1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
+1. **Complete Coverage** -- Every reasonably testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
 3. **No Overspecification** -- Requirements must not be more specific than READMEs
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)

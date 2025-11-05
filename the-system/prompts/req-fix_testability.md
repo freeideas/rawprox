@@ -6,7 +6,7 @@ Check if all requirements in `./reqs/` are testable (have observable behavior).
 
 ## THE SEVEN RULES FOR REQUIREMENTS
 
-1. **Complete Coverage** -- Every testable behavior in READMEs must have a $REQ_ID
+1. **Complete Coverage** -- Every reasonably testable behavior in READMEs must have a $REQ_ID
 2. **No Invention** -- Only requirements from READMEs are allowed
 3. **No Overspecification** -- Requirements must not be more specific than READMEs
 4. **Tell Stories** -- Flows go from start to shutdown (complete use-case scenarios)
@@ -56,23 +56,22 @@ assert 'VERDICT: PASS' in result.stdout  # $REQ_ARCH_001
 
 ## Untestable Requirements (Flag These)
 
-**Constraint-only statements without observable behavior:**
-- ✗ "Port number is required" -- doesn't say what happens when missing
-- ✗ "At least one port rule is required" -- doesn't say error or wait
-- ✗ "Configuration file must be valid JSON" -- doesn't say what happens with invalid JSON
-- ✗ "Username must not be empty" -- doesn't say rejection behavior
-
 **Performance and load characteristics (difficult to test reliably):**
 - ✗ "Handles 10,000 requests per second" -- hard to test consistently
 - ✗ "Low latency" -- subjective and environment-dependent
 - ✗ "Fast startup" -- relative and unreliable to verify
 - ✗ "Scales to high traffic" -- difficult to test consistently
 
+**Vague statements without observable behavior:**
+- ✗ "Should be user-friendly" -- subjective, not verifiable
+- ✗ "Must be reliable" -- vague, no observable criteria
+- ✗ "Good error messages" -- subjective without specific requirements
+
 **Key difference:**
-- ✓ "System does X" or "System uses architecture Y" → testable
-- ✗ "X is required" without saying what happens → untestable
-- ✓ "Use non-blocking I/O" → testable (architectural requirement)
+- ✓ "System accepts X and does Y" → testable (happy path)
+- ✓ "System uses architecture Y" → testable (architectural requirement)
 - ✗ "Fast performance" → untestable (performance claim)
+- ✗ "User-friendly interface" → untestable (subjective)
 
 ---
 
@@ -80,9 +79,9 @@ assert 'VERDICT: PASS' in result.stdout  # $REQ_ARCH_001
 
 1. Read `./README.md` and all files in `./readme/`
 2. Read all flow files in `./reqs/`
-3. Identify requirements that state constraints without observable behavior
-4. **Focus on significant issues** -- ignore minor testability concerns; only flag clear constraint-only requirements
-5. **Be precise** -- only flag constraint-only requirements, not architectural or limitation statements
+3. Identify requirements that are truly untestable (performance claims, vague subjective statements)
+4. **Focus on significant issues** -- ignore minor testability concerns; only flag clearly untestable requirements
+5. **Happy path focus** -- Requirements like "accepts one directory argument" or "port number is required" are fine; they describe correct usage. Don't flag them as untestable just because they don't specify every possible wrong input.
 
 ---
 

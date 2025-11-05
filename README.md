@@ -8,11 +8,11 @@ RawProx forwards TCP connections while capturing all traffic in real-time. It lo
 
 ## Key Features
 
-- **Zero-copy TCP forwarding** -- Full-speed proxying without blocking network I/O
+- **Non-blocking logging** -- Network forwarding never waits for disk writes
 - **NDJSON logging** -- Structured logs with timestamps, connection IDs, and traffic data
-- **Dynamic control** -- Add/remove port rules at runtime via MCP
+- **Dynamic control** -- Add/remove port rules and log destinations at runtime via MCP
 - **Time-rotated logs** -- Automatic file rotation (hourly, daily, per-minute, etc.)
-- **Multiple outputs** -- Log to STDOUT and/or multiple directories simultaneously
+- **Multiple log destinations** -- Via MCP, log to STDOUT and/or multiple directories simultaneously
 - **No dependencies** -- Single executable, runs anywhere
 
 ## Quick Start
@@ -31,16 +31,16 @@ rawprox.exe 8080:example.com:80 9000:api.example.com:443 @logs
 rawprox.exe --mcp-port 8765 8080:example.com:80 @logs
 ```
 
-Stop with `Ctrl-C`.
-
-If a port is already in use, RawProx will show an error indicating which port is occupied.
+**Error conditions:**
+- If a port is already in use, RawProx will show an error to STDERR indicating which port is occupied, and will exit with a non-zero status.
+- If a log directory is specified (`@DIRECTORY`) without any port rules, RawProx will show an error to STDERR and exit with a non-zero status. Use MCP's `start-logging` tool for dynamic logging control.
 
 ## Usage
 
 ### Command-Line Format
 
 ```bash
-rawprox.exe [--mcp-port PORT] [PORT_RULE...] [LOG_DESTINATION...]
+rawprox.exe [--mcp-port PORT] [PORT_RULE...] [@LOG_DIRECTORY]
 ```
 
 **Port rules:**
@@ -52,24 +52,26 @@ Examples:
 - `8080:example.com:80` -- Forward local port 8080 to example.com:80
 - `9000:api.example.com:443` -- Forward local port 9000 to api.example.com:443
 
-**Log destinations:**
+**Log directory:**
 ```
-@DIRECTORY                    # Log to time-rotated files
+@DIRECTORY                    # Log to time-rotated files in this directory
 ```
 
 Examples:
 - `@./logs` -- Log to `./logs/` directory with hourly rotation
 - `@/var/log/rawprox` -- Log to `/var/log/rawprox/` directory
 
-**Without any log destination:** Logs go to STDOUT only.
+**Note:** Command-line accepts only one @DIRECTORY. All port rules log to the same destination. For multiple log destinations, use MCP mode (see MCP Server documentation).
 
-**Without port rules and with --mcp-port:** RawProx waits for MCP commands to add port rules.
+**Without any log directory:** Logs go to STDOUT only.
 
-**Without port rules and without --mcp-port:** RawProx displays help text to STDERR and exits (no NDJSON output).
+**With --mcp-port (no port rules):** RawProx runs and waits for MCP commands to add port rules dynamically.
 
-**Invalid port rules:** If arguments don't parse as valid port rules or destinations, RawProx shows an error and exits.
+**With port rules (no --mcp-port):** RawProx runs as a simple proxy forwarding traffic on those ports.
 
-**Note:** When RawProx exits because it has nothing to do, it outputs only help text to STDERR, never NDJSON to STDOUT.
+**With both --mcp-port and port rules:** RawProx runs, forwards traffic, and accepts MCP commands for dynamic control.
+
+**With nothing to do:** If RawProx has nothing to do (no valid `--mcp-port` and no valid port rules), it displays help text to STDERR and exits (no NDJSON output).
 
 ### Multiple Services
 
@@ -80,13 +82,6 @@ rawprox.exe 8080:web.example.com:80 9000:api.example.com:443 3000:db.example.com
 ```
 
 Each port rule creates an independent listener. Connections are forwarded independently and logged with unique connection IDs.
-
-### Stopping
-
-- **Ctrl-C** -- Graceful shutdown
-- **MCP shutdown command** -- Graceful shutdown via MCP (when using `--mcp-port`)
-
-On shutdown, RawProx closes all connections, stops all listeners, flushes buffered logs, and terminates.
 
 ## Runtime Requirements
 
@@ -113,7 +108,7 @@ The build process should:
 
 ## Documentation
 
-- **[Help Text](./readme/HELP.md)** -- Complete usage and examples (shown when running with no arguments)
+- **[Help Text](./readme/COMMAND-LINE_USAGE.md)** -- Complete usage and examples (this information is shown when there are no valid command-line arguments)
 - **[Log Format](./readme/LOG_FORMAT.md)** -- NDJSON event structure and parsing examples
 - **[MCP Server](./readme/MCP_SERVER.md)** -- JSON-RPC API for dynamic control (requires `--mcp-port` flag)
 - **[Performance](./readme/PERFORMANCE.md)** -- Memory buffering and I/O strategy

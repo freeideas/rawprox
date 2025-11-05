@@ -77,11 +77,17 @@ Emitted for each chunk of data transmitted:
 **Fields:**
 - `time` -- ISO 8601 timestamp with microsecond precision (UTC)
 - `ConnID` -- Unique connection identifier (matches corresponding `open`/`close` events)
-- `data` -- Raw bytes transmitted (JSON-escaped string)
+- `data` -- Raw bytes transmitted (escaped string)
 - `from` -- Source address sending this data
 - `to` -- Destination address receiving this data
 
-**Note:** Binary data is JSON-escaped using standard JSON string escaping rules (`\u0000` for null bytes, `\n` for newlines, etc.).
+**Data escaping:** The `data` field uses URL-encoding to avoid `\uNNNN` sequences and handle arbitrary binary data:
+- **Printable ASCII** (0x20-0x7E except `%`) → literal characters
+- **Percent sign** → `%25`
+- **Standard JSON escapes** → `\t`, `\n`, `\r`, `\"`, `\\` (for tab, newline, carriage return, quote, backslash)
+- **All other bytes** → `%XX` format (e.g., `%00` for null byte, `%01` for byte 1, `%1F` for byte 31)
+
+Standard JSON parsing followed by URL-decoding restores byte-perfect data.
 
 ## Complete Example Session
 

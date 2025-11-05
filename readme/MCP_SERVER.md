@@ -23,33 +23,30 @@ RawProx will emit an NDJSON event to stdout:
 ```bash
 rawprox.exe --mcp-port 8765 8080:example.com:80 @./logs
 ```
+- RawProx runs, forwards traffic, and enables MCP control
 - Starts logging immediately
-- MCP server available for dynamic control
-- Can be stopped with Ctrl-C or via MCP shutdown command
 
 **With --mcp-port but without port rules:**
 ```bash
 rawprox.exe --mcp-port 8765
 ```
-- Waits for MCP commands to add port rules
-- No help text shown (since MCP server is running)
-- Can be stopped with Ctrl-C or via MCP shutdown command
+- RawProx runs and waits for MCP commands to add port rules dynamically
+- No help text shown (MCP server gives it something to do)
 
-**Without --mcp-port:**
+**With port rules but without --mcp-port:**
 ```bash
 rawprox.exe 8080:example.com:80 @./logs
 ```
-- Runs as a simple proxy without MCP server
+- RawProx runs as a simple proxy forwarding traffic
 - No MCP control available
-- Can only be stopped with Ctrl-C
 
 **Without --mcp-port and without port rules:**
 ```bash
 rawprox.exe
 ```
-- Displays help text to STDERR
-- Exits immediately with exit code 1
-- No NDJSON output to STDOUT
+- RawProx has nothing to do
+- Displays help text (see [Help Text](./COMMAND-LINE_USAGE.md) )
+- Exits immediately
 
 ## MCP Protocol
 
@@ -189,7 +186,7 @@ Content-Type: application/json
       },
       {
         "name": "shutdown",
-        "description": "Gracefully shutdown the RawProx application",
+        "description": "Shutdown the RawProx application",
         "inputSchema": {
           "type": "object",
           "properties": {}
@@ -295,6 +292,6 @@ Remove an existing port forwarding rule.
 
 ### shutdown
 
-Gracefully shutdown the RawProx application. Closes all connections, stops all listeners, flushes buffered logs, and terminates.
+Shutdown the RawProx application.
 
 **Arguments:** None

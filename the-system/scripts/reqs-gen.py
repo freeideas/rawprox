@@ -279,7 +279,7 @@ def main():
 
     # Run validation/fix loop until requirements stabilize
     iteration = 0
-    max_iterations = 10  # Prevent infinite loops
+    max_iterations = 5  # Prevent infinite loops
 
     while iteration < max_iterations:
         iteration += 1

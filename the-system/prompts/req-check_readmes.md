@@ -6,12 +6,15 @@ Check if README documentation in `./README.md` and `./readme/` has quality issue
 
 ## Purpose
 
-Validate that documentation is clear, complete, and unambiguous.
+Validate that documentation clearly describes what the software does with correct usage, without being pedantic about error handling.
 
 **This prompt:**
 - Reads all README documentation
-- Identifies quality issues
+- Identifies significant quality issues (contradictions, vagueness, untestable claims)
+- Does NOT demand exhaustive error specifications or wrong-input handling
 - Reports problems that must be fixed
+
+**Philosophy:** READMEs should focus on what the software DOES, not exhaustively document every way it can fail.
 
 ---
 
@@ -31,32 +34,24 @@ Validate that documentation is clear, complete, and unambiguous.
 - Sequential behaviors (e.g., "first X, then Y")
 - Different aspects of same feature
 
-### 2. Constraint-Only Statements
+### 2. Vague or Unobservable Specifications
 
-**Check:** Are there constraints without observable behavior?
+**Check:** Are specifications too vague to implement or verify?
 
 **Examples of problems:**
-- "Port number is required" -- doesn't say what happens when missing
-- "At least one rule must be configured" -- doesn't say error or wait or default
-- "Configuration file must be valid JSON" -- doesn't say what happens with invalid JSON
-- "Username must not be empty" -- doesn't say rejection behavior
+- "Handle errors appropriately" -- no indication what "appropriately" means
+- "Secure connection" -- which protocol? which version? what validation?
+- "Process requests efficiently" -- what does this mean in observable terms?
+- "User-friendly interface" -- completely subjective
 
-**Good examples:**
-- "Show error and exit if port number is missing"
-- "Wait for configuration if no rules are provided"
-- "Log error and use defaults if JSON is invalid"
+**Good examples (specific enough to implement):**
+- "Accept connections on port 8080"
+- "Use TLS 1.2 or higher for HTTPS"
+- "Log each request to stdout"
 
-### 3. Ambiguous Specifications
+**Note:** Statements like "accepts one directory argument" or "port number is required" are NOT vague - they clearly describe correct usage. Don't flag these.
 
-**Check:** Are specifications unclear or open to multiple interpretations?
-
-**Examples:**
-- "Handle errors appropriately" -- what does "appropriately" mean?
-- "Fast startup" -- how fast? what's observable?
-- "Secure connection" -- which protocol? what validation?
-- "Process requests efficiently" -- what does this mean in practice?
-
-### 4. Performance/Load Claims Without Observable Behavior
+### 3. Performance/Load Claims Without Observable Behavior
 
 **Check:** Are there performance claims that can't be tested?
 
@@ -75,12 +70,26 @@ Validate that documentation is clear, complete, and unambiguous.
 
 ---
 
+## What NOT to Flag
+
+**DO NOT flag as problems:**
+- **Statements of correct usage** -- "Accepts one directory argument", "Port number is required", "Configuration file must be valid JSON" are all fine. READMEs don't need to specify what happens with every wrong input.
+- **Error examples without exhaustive detail** -- If README says "show error if port in use" without specifying exact error message format, that's fine. We don't need exact error text specifications.
+- **Happy path focus** -- If README documents what the software does with correct input but doesn't exhaustively document all error cases, that's acceptable. Focus on happy paths is good.
+- **Absence of features** -- "Does not support UDP" is just documentation of what's not included; it's not a quality issue.
+- **Build documentation** -- It's fine for READMEs to include build instructions, development prerequisites, or compilation steps. These won't generate requirements, but they're not quality problems.
+
+**The philosophy:** READMEs should clearly document what the software DOES with correct usage. They don't need to exhaustively specify every possible error condition, wrong input, or edge case.
+
+---
+
 ## Your Task
 
 1. Read `./README.md` and all files in `./readme/`
-2. Check for the four categories of problems listed above
+2. Check for the three categories of problems listed above
 3. **Focus on significant issues** -- ignore minor unclear wording; only flag clear problems
-4. Report problems that must be fixed
+4. **Don't be pedantic** -- if something describes correct usage clearly, don't demand error handling specifications
+5. Report problems that must be fixed
 
 ---
 
@@ -103,14 +112,19 @@ Then for each issue, list:
 **README_CHANGES_REQUIRED: true**
 
 File: ./readme/LIFECYCLE.md
-Problem: Constraint-only statement
-Location: Section "Configuration"
-Issue: States "port number is required" but doesn't specify what happens when missing (error message? exit? default value?)
+Problem: Vague or unobservable specification
+Location: Section "Error Handling"
+Issue: States "handle errors appropriately" without indicating what appropriate means - log? exit? retry?
 
 File: ./readme/API.md
 Problem: Internal contradiction
 Location: Sections "Startup" and "Error Handling"
 Issue: "Startup" says port defaults to 8080, but "Error Handling" says missing port causes error exit
+
+File: ./readme/PERFORMANCE.md
+Problem: Performance/load claims without observable behavior
+Location: Section "Throughput"
+Issue: Claims "handles 10,000 requests per second" which is difficult to test reliably. Instead, document architectural decisions like "uses non-blocking I/O"
 ```
 
 **If no significant issues found:**

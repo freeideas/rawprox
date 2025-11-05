@@ -12,18 +12,18 @@ Logs can be written to:
 
 ### MCP Server Events
 
-Emitted when the MCP server starts (only when using `--mcp` flag):
+Emitted when the MCP server starts (only when using `--mcp-port`):
 
 ```json
-{"time":"2025-10-22T15:32:47.123456Z","event":"start-mcp","port":54321}
+{"time":"2025-10-22T15:32:47.123456Z","event":"mcp-ready","endpoint":"http://localhost:8765/mcp"}
 ```
 
 **Fields:**
 - `time` -- ISO 8601 timestamp with microsecond precision (UTC)
-- `event` -- Always `"start-mcp"`
-- `port` -- TCP port number where MCP server is listening
+- `event` -- Always `"mcp-ready"`
+- `endpoint` -- Full HTTP URL where MCP server is listening
 
-**Note:** This event only appears when RawProx is started with the `--mcp` flag.
+**Note:** This event only appears when RawProx is started with the `--mcp-port` argument. The event is emitted to stdout as NDJSON, maintaining compatibility with stdout logging.
 
 ### Logging Control Events
 
@@ -85,10 +85,10 @@ Emitted for each chunk of data transmitted:
 
 ## Complete Example Session
 
-This example shows output when using the `--mcp` flag.
+This example shows output when using `--mcp-port` with directory logging:
 
 ```json
-{"time":"2025-10-22T15:32:47.000000Z","event":"start-mcp","port":54321}
+{"time":"2025-10-22T15:32:47.000000Z","event":"mcp-ready","endpoint":"http://localhost:8765/mcp"}
 {"time":"2025-10-22T15:32:47.100000Z","event":"start-logging","directory":"./logs","filename_format":"rawprox_%Y-%m-%d-%H.ndjson"}
 {"time":"2025-10-22T15:32:47.123456Z","ConnID":"0tK3X","event":"open","from":"127.0.0.1:54321","to":"example.com:80"}
 {"time":"2025-10-22T15:32:47.234567Z","ConnID":"0tK3X","data":"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n","from":"127.0.0.1:54321","to":"example.com:80"}

@@ -1,63 +1,121 @@
 # MCP Server Mode (Optional)
 
-When started with the `--mcp` flag, RawProx operates as an MCP (Model Context Protocol) server, allowing dynamic control via JSON-RPC over TCP/IP. This enables starting/stopping logging to different directories and port forwardings at runtime.
+When started with `--mcp-port PORT`, RawProx operates as an MCP (Model Context Protocol) server, allowing dynamic control over HTTP. This enables starting/stopping logging to different directories and port forwardings at runtime.
 
-## Start-up Behavior
+## Starting the MCP Server
 
-**With --mcp and port rules:**
+Use `--mcp-port` to specify the port for MCP commands:
+
 ```bash
-rawprox --mcp 8080:example.com:80 @./logs
+# Listen on specific port
+rawprox.exe --mcp-port 8765 8080:example.com:80 @./logs
+
+# Let system choose available port
+rawprox.exe --mcp-port 0 8080:example.com:80 @./logs
+```
+
+RawProx will emit an NDJSON event to stdout:
+```json
+{"time":"2025-10-22T15:32:47.123456Z","event":"mcp-ready","endpoint":"http://localhost:8765/mcp"}
+```
+
+**With --mcp-port and port rules:**
+```bash
+rawprox.exe --mcp-port 8765 8080:example.com:80 @./logs
 ```
 - Starts logging immediately
 - MCP server available for dynamic control
 - Can be stopped with Ctrl-C or via MCP shutdown command
 
-**With --mcp but without port rules:**
+**With --mcp-port but without port rules:**
 ```bash
-rawprox --mcp
+rawprox.exe --mcp-port 8765
 ```
-- Waits for JSON-RPC commands to add port rules
+- Waits for MCP commands to add port rules
 - No help text shown (since MCP server is running)
 - Can be stopped with Ctrl-C or via MCP shutdown command
 
-**Without --mcp flag:**
+**Without --mcp-port:**
 ```bash
-rawprox 8080:example.com:80 @./logs
+rawprox.exe 8080:example.com:80 @./logs
 ```
 - Runs as a simple proxy without MCP server
-- No JSON-RPC control available
+- No MCP control available
 - Can only be stopped with Ctrl-C
 
-**Without --mcp and without port rules:**
+**Without --mcp-port and without port rules:**
 ```bash
-rawprox
+rawprox.exe
 ```
-- Displays help text to STDERR (from HELP.md)
+- Displays help text to STDERR
 - Exits immediately with exit code 1
 - No NDJSON output to STDOUT
 
-The `start-mcp` event is emitted to STDOUT (with the TCP port number) only when the `--mcp` flag is used.
+## MCP Protocol
 
-## JSON-RPC Protocol
+RawProx implements the [Model Context Protocol](https://modelcontextprotocol.io/) over HTTP. The server accepts SSE (Server-Sent Events) for transport.
 
-The MCP server accepts JSON-RPC 2.0 requests over TCP/IP and returns JSON-RPC 2.0 responses (success results or error objects).
+### Example Session
 
-**Available methods:**
+**Initialize connection:**
 
-### tools/list
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8765
+Accept: application/json, text/event-stream
+Content-Type: application/json
 
-Discover all available JSON-RPC methods with their schemas. This is the standard MCP introspection method.
-
-**Parameters:** None (empty object)
-
-**Returns:** A list of all available tools with their names, descriptions, and input schemas.
-
-**Example:**
-```json
-{"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}
+{
+  "jsonrpc": "2.0",
+  "method": "initialize",
+  "id": 1,
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "example-client",
+      "version": "1.0.0"
+    }
+  }
+}
 ```
 
 **Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "serverInfo": {
+      "name": "rawprox",
+      "version": "1.0.0"
+    }
+  },
+  "id": 1
+}
+```
+
+**List available tools:**
+
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8765
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "tools/list",
+  "id": 2,
+  "params": {}
+}
+```
+
+**Response:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -70,7 +128,7 @@ Discover all available JSON-RPC methods with their schemas. This is the standard
           "type": "object",
           "properties": {
             "directory": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "Directory path, or null for STDOUT"
             },
             "filename_format": {
@@ -80,145 +138,163 @@ Discover all available JSON-RPC methods with their schemas. This is the standard
           }
         }
       },
-      ...
+      {
+        "name": "stop-logging",
+        "description": "Stop logging to one or all destinations",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "directory": {
+              "type": ["string", "null"],
+              "description": "Optional: specific directory, null for STDOUT, omit to stop all"
+            }
+          }
+        }
+      },
+      {
+        "name": "add-port-rule",
+        "description": "Add a new port forwarding rule at runtime",
+        "inputSchema": {
+          "type": "object",
+          "required": ["local_port", "target_host", "target_port"],
+          "properties": {
+            "local_port": {
+              "type": "integer",
+              "description": "Local port to listen on"
+            },
+            "target_host": {
+              "type": "string",
+              "description": "Target hostname or IP address"
+            },
+            "target_port": {
+              "type": "integer",
+              "description": "Target port number"
+            }
+          }
+        }
+      },
+      {
+        "name": "remove-port-rule",
+        "description": "Remove an existing port forwarding rule",
+        "inputSchema": {
+          "type": "object",
+          "required": ["local_port"],
+          "properties": {
+            "local_port": {
+              "type": "integer",
+              "description": "Local port of the rule to remove"
+            }
+          }
+        }
+      },
+      {
+        "name": "shutdown",
+        "description": "Gracefully shutdown the RawProx application",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
     ]
   },
-  "id": 1
+  "id": 2
 }
 ```
 
-### start-logging
+**Call a tool:**
 
-Start logging to a destination (STDOUT or directory).
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8765
+Content-Type: application/json
 
-**Parameters:**
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "id": 3,
+  "params": {
+    "name": "add-port-rule",
+    "arguments": {
+      "local_port": 9000,
+      "target_host": "api.example.com",
+      "target_port": 443
+    }
+  }
+}
+```
+
+**Response:**
+
 ```json
 {
-  "directory": "./logs",           // Directory path, or null for STDOUT
-  "filename_format": "rawprox_%Y-%m-%d-%H.ndjson"  // Optional, strftime pattern
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Port rule added: 9000 -> api.example.com:443"
+      }
+    ]
+  },
+  "id": 3
 }
 ```
 
-**Examples:**
-```json
-// Start logging to STDOUT
-{"jsonrpc": "2.0", "method": "start-logging", "params": {"directory": null}, "id": 1}
-
-// Start logging to directory with hourly rotation
-{"jsonrpc": "2.0", "method": "start-logging", "params": {"directory": "./logs"}, "id": 2}
-
-// Start logging with custom rotation (daily)
-{"jsonrpc": "2.0", "method": "start-logging", "params": {"directory": "./logs", "filename_format": "rawprox_%Y-%m-%d.ndjson"}, "id": 3}
-```
-
-### stop-logging
-
-Stop logging to one or all destinations.
-
-**Important: Argument subtlety:**
-- `{}` (no arguments) → stops ALL logging (all destinations)
-- `{"directory": null}` → stops only STDOUT logging
-- `{"directory": "./logs"}` → stops only logging to `./logs` directory
-
-**Parameters:**
-```json
-{
-  "directory": "./logs"  // Optional: specific directory, null for STDOUT, omit to stop all
-}
-```
-
-**Examples:**
-```json
-// Stop ALL logging
-{"jsonrpc": "2.0", "method": "stop-logging", "params": {}, "id": 4}
-
-// Stop only STDOUT logging
-{"jsonrpc": "2.0", "method": "stop-logging", "params": {"directory": null}, "id": 5}
-
-// Stop only logging to ./logs
-{"jsonrpc": "2.0", "method": "stop-logging", "params": {"directory": "./logs"}, "id": 6}
-```
-
-This distinction allows independent management of multiple logging destinations.
-
-### add-port-rule
-
-Add a new port forwarding rule at runtime.
-
-**Parameters:**
-```json
-{
-  "local_port": 9000,
-  "target_host": "api.example.com",
-  "target_port": 443
-}
-```
-
-**Example:**
-```json
-{"jsonrpc": "2.0", "method": "add-port-rule", "params": {"local_port": 9000, "target_host": "api.example.com", "target_port": 443}, "id": 7}
-```
-
-### remove-port-rule
-
-Remove an existing port forwarding rule.
-
-**Parameters:**
-```json
-{
-  "local_port": 9000
-}
-```
-
-**Example:**
-```json
-{"jsonrpc": "2.0", "method": "remove-port-rule", "params": {"local_port": 9000}, "id": 8}
-```
-
-### shutdown
-
-Gracefully shutdown the RawProx application.
-
-**Parameters:** None (empty object)
-
-**Example:**
-```json
-{"jsonrpc": "2.0", "method": "shutdown", "params": {}, "id": 9}
-```
-
-The application will close all connections, stop all listeners, flush any buffered logs, and terminate.
-
-## Connection
-
-When started with `--mcp`, the MCP server listens on a random available TCP port between 10000 and 65500. The `start-mcp` event in the output stream provides the connection details:
-
-```json
-{"time":"2025-10-22T15:32:47.123456Z","event":"start-mcp","port":54321}
-```
-
-Connect to `localhost:54321` and send JSON-RPC requests.
-
-## Error Handling
-
-Failed requests return standard JSON-RPC error responses:
+**Error response:**
 
 ```json
 {
   "jsonrpc": "2.0",
   "error": {
     "code": -32602,
-    "message": "Port 8080 already in use"
+    "message": "Port 9000 already in use"
   },
-  "id": 1
+  "id": 3
 }
 ```
 
-Successful responses:
+## Tool Reference
 
-```json
-{
-  "jsonrpc": "2.0",
-  "result": "success",
-  "id": 1
-}
-```
+The MCP server provides the following tools. Use `tools/list` to discover them dynamically with full schemas.
+
+### start-logging
+
+Start logging to a destination (STDOUT or directory).
+
+**Arguments:**
+- `directory` (string|null) -- Directory path, or null for STDOUT
+- `filename_format` (string, optional) -- Strftime pattern (default: `rawprox_%Y-%m-%d-%H.ndjson`)
+
+### stop-logging
+
+Stop logging to one or all destinations.
+
+**Important subtlety:**
+- Omit `directory` argument → stops ALL logging (all destinations)
+- `"directory": null` → stops only STDOUT logging
+- `"directory": "./logs"` → stops only logging to `./logs` directory
+
+**Arguments:**
+- `directory` (string|null, optional) -- Specific directory, null for STDOUT, omit to stop all
+
+### add-port-rule
+
+Add a new port forwarding rule at runtime.
+
+**Arguments:**
+- `local_port` (integer, required) -- Local port to listen on
+- `target_host` (string, required) -- Target hostname or IP address
+- `target_port` (integer, required) -- Target port number
+
+### remove-port-rule
+
+Remove an existing port forwarding rule.
+
+**Arguments:**
+- `local_port` (integer, required) -- Local port of the rule to remove
+
+### shutdown
+
+Gracefully shutdown the RawProx application. Closes all connections, stops all listeners, flushes buffered logs, and terminates.
+
+**Arguments:** None

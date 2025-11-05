@@ -57,13 +57,13 @@ Files are never opened/written/closed more frequently than the flush interval. T
 **Example:**
 ```bash
 # Flush every 5 seconds (lower memory usage, more I/O)
-rawprox 8080:example.com:80 @./logs --flush-millis 5000
+rawprox.exe 8080:example.com:80 @./logs --flush-millis 5000
 
 # Flush every 500ms (higher memory usage, less I/O)
-rawprox 8080:example.com:80 @./logs --flush-millis 500
+rawprox.exe 8080:example.com:80 @./logs --flush-millis 500
 
 # Flush every 100ms (for testing with 1-second rotation)
-rawprox 8080:example.com:80 @./logs --filename-format "rawprox_%Y-%m-%d-%H-%M-%S.ndjson" --flush-millis 100
+rawprox.exe 8080:example.com:80 @./logs --filename-format "rawprox_%Y-%m-%d-%H-%M-%S.ndjson" --flush-millis 100
 ```
 
 ## STDOUT Mode
@@ -72,7 +72,7 @@ When logging to STDOUT (no `@DIRECTORY`), events are still buffered and flushed 
 
 ```bash
 # Events buffered and flushed every 2000ms
-rawprox 8080:example.com:80 | jq .
+rawprox.exe 8080:example.com:80 | jq .
 ```
 
 **Testing with fast rotation:**

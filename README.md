@@ -19,16 +19,16 @@ RawProx forwards TCP connections while capturing all traffic in real-time. It lo
 
 ```bash
 # Simple proxy (forward port 8080 to example.com:80, log to stdout)
-rawprox 8080:example.com:80
+rawprox.exe 8080:example.com:80
 
 # Log to time-rotated files
-rawprox 8080:example.com:80 @./logs
+rawprox.exe 8080:example.com:80 @./logs
 
 # Multiple port rules
-rawprox 8080:example.com:80 9000:api.example.com:443 @./logs
+rawprox.exe 8080:example.com:80 9000:api.example.com:443 @./logs
 
 # With MCP server for dynamic control
-rawprox --mcp 8080:example.com:80 @./logs
+rawprox.exe --mcp-port 8765 8080:example.com:80 @./logs
 ```
 
 Stop with `Ctrl-C`.
@@ -40,7 +40,7 @@ If a port is already in use, RawProx will show an error indicating which port is
 ### Command-Line Format
 
 ```bash
-rawprox [--mcp] [PORT_RULE...] [LOG_DESTINATION...]
+rawprox.exe [--mcp-port PORT] [PORT_RULE...] [LOG_DESTINATION...]
 ```
 
 **Port rules:**
@@ -63,9 +63,9 @@ Examples:
 
 **Without any log destination:** Logs go to STDOUT only.
 
-**Without port rules and with --mcp:** RawProx waits for MCP commands to add port rules.
+**Without port rules and with --mcp-port:** RawProx waits for MCP commands to add port rules.
 
-**Without port rules and without --mcp:** RawProx displays help text to STDERR and exits (no NDJSON output).
+**Without port rules and without --mcp-port:** RawProx displays help text to STDERR and exits (no NDJSON output).
 
 **Invalid port rules:** If arguments don't parse as valid port rules or destinations, RawProx shows an error and exits.
 
@@ -76,7 +76,7 @@ Examples:
 Monitor several services simultaneously by providing multiple port rules:
 
 ```bash
-rawprox 8080:web.example.com:80 9000:api.example.com:443 3000:db.example.com:5432 @./logs
+rawprox.exe 8080:web.example.com:80 9000:api.example.com:443 3000:db.example.com:5432 @./logs
 ```
 
 Each port rule creates an independent listener. Connections are forwarded independently and logged with unique connection IDs.
@@ -84,7 +84,7 @@ Each port rule creates an independent listener. Connections are forwarded indepe
 ### Stopping
 
 - **Ctrl-C** -- Graceful shutdown
-- **MCP shutdown command** -- Graceful shutdown via JSON-RPC (when using `--mcp`)
+- **MCP shutdown command** -- Graceful shutdown via MCP (when using `--mcp-port`)
 
 On shutdown, RawProx closes all connections, stops all listeners, flushes buffered logs, and terminates.
 

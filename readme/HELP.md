@@ -3,13 +3,14 @@
 ## Usage
 
 ```
-rawprox [--mcp] [--flush-millis MS] [--filename-format FORMAT] PORT_RULE... [LOG_DESTINATION...]
+rawprox.exe [--mcp-port PORT] [--flush-millis MS] [--filename-format FORMAT] PORT_RULE... [LOG_DESTINATION...]
 ```
 
 ## Arguments
 
-**--mcp**
-Enable MCP (Model Context Protocol) server for dynamic runtime control via JSON-RPC.
+**--mcp-port PORT**
+Enable MCP (Model Context Protocol) server for dynamic runtime control over HTTP.
+Specify a port number, or use 0 to let the system choose an available port.
 When enabled, you can add/remove port rules and start/stop logging without restarting.
 
 **--flush-millis MS**
@@ -48,42 +49,37 @@ Examples:
 
 **Simple proxy with STDOUT logging:**
 ```bash
-rawprox 8080:example.com:80
+rawprox.exe 8080:example.com:80
 ```
 
 **Proxy with file logging:**
 ```bash
-rawprox 8080:example.com:80 @./logs
+rawprox.exe 8080:example.com:80 @./logs
 ```
 
 **Multiple port rules:**
 ```bash
-rawprox 8080:example.com:80 9000:api.example.com:443 @./logs
+rawprox.exe 8080:example.com:80 9000:api.example.com:443 @./logs
 ```
 
 **MCP server for dynamic control:**
 ```bash
-rawprox --mcp 8080:example.com:80 @./logs
+rawprox.exe --mcp-port 8765 8080:example.com:80 @./logs
 ```
 
 **MCP server with no initial port rules (wait for commands):**
 ```bash
-rawprox --mcp
+rawprox.exe --mcp-port 8765
 ```
 
 **Custom flush interval and daily rotation:**
 ```bash
-rawprox 8080:example.com:80 @./logs --flush-millis 5000 --filename-format "rawprox_%Y-%m-%d.ndjson"
+rawprox.exe 8080:example.com:80 @./logs --flush-millis 5000 --filename-format "rawprox_%Y-%m-%d.ndjson"
 ```
 
 ## MCP Introspection
 
-When using `--mcp` mode, discover available JSON-RPC methods:
-```bash
-echo '{"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}' | nc localhost PORT
-```
-
-Replace PORT with the port number from the `start-mcp` event.
+When using `--mcp-port`, the server will print the MCP endpoint URL on startup. Use any HTTP client to send MCP requests to that endpoint. See the MCP Server documentation for protocol details and examples.
 
 ## Quick Tips
 
@@ -91,7 +87,7 @@ Replace PORT with the port number from the `start-mcp` event.
 - All logs use NDJSON (newline-delimited JSON) format
 - Network I/O is never blocked by logging -- if logging can't keep up, RawProx buffers in memory
 - If a port is already in use, RawProx will exit with an error
-- Use `--mcp` for runtime control without restarting the process
+- Use `--mcp-port` for runtime control without restarting the process
 
 ## Documentation
 

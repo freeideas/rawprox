@@ -1,3 +1,0 @@
-test_02_simple_proxy_session.py FAIL
-✗ Unexpected error: Command '['./release/rawprox.exe', '19998:example.com:80']' timed out after 5 seconds
-Installed 5 packages in 254ms

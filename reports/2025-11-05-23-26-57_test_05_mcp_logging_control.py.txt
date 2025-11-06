@@ -1,3 +1,0 @@
-test_05_mcp_logging_control.py PASS
-Verifying architectural requirement $REQ_LOG_013...
-✓ All tests passed

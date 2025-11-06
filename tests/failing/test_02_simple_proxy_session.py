@@ -313,7 +313,7 @@ def main():
 
         # $REQ_SIMPLE_014: Data Escaping
         # $REQ_SIMPLE_014A: Byte-Perfect Data Restoration
-        # $REQ_SIMPLE_014B: No Unicode Escapes
+        # Ensure NDJSON output avoids Unicode escape sequences
         # Test URL-encoding of data field with various byte values
         # Set up target server that will echo back known test data
         target_server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -433,7 +433,7 @@ def main():
 
         assert restored == expected, f"URL-decoded data should match original bytes exactly\nExpected: {expected}\nGot: {restored}"  # $REQ_SIMPLE_014A
 
-        # $REQ_SIMPLE_014B: No Unicode Escapes
+        # Ensure NDJSON output avoids Unicode escape sequences
         # Verify that the raw NDJSON output does NOT contain \uNNNN escape sequences
         # This ensures URL-encoding is used instead of Unicode escapes for all bytes
         import re
@@ -446,7 +446,7 @@ def main():
                 if '"data"' in line:
                     # Verify no \uNNNN sequences in the entire line
                     assert not re.search(unicode_escape_pattern, line), \
-                        f"Found Unicode escape sequence in NDJSON output (should use URL-encoding instead): {line}"  # $REQ_SIMPLE_014B
+                        f"Found Unicode escape sequence in NDJSON output (should use URL-encoding instead): {line}"
 
         # $REQ_SIMPLE_015: Connection Close Event
         # $REQ_SIMPLE_015A: Connection Direction Indication

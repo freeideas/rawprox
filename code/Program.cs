@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -23,6 +24,10 @@ class Program
     private static readonly ConcurrentDictionary<int, TcpListener> _listeners = new();
     private static readonly ConcurrentBag<LogDestination> _logDestinations = new();
     private static readonly CancellationTokenSource _cts = new();
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
     private static int _mcpPort = -1;
     private static int _flushMillis = 2000;
     private static string _filenameFormat = "rawprox_%Y-%m-%d-%H.ndjson";
@@ -396,7 +401,7 @@ Documentation:
 
     private static void LogEvent(Dictionary<string, object> obj, bool flush = false)
     {
-        var json = JsonSerializer.Serialize(obj, AppJsonContext.Default.DictionaryStringObject);
+        var json = SerializeLogObject(obj);
         foreach (var dest in _logDestinations)
         {
             // Fire-and-forget: Log() returns Task.CompletedTask immediately, no need to await
@@ -406,6 +411,17 @@ Documentation:
                 _ = Task.Run(() => dest.FlushNow());
             }
         }
+    }
+
+    private static string SerializeLogObject(Dictionary<string, object> obj)
+    {
+        // Use relaxed escaping so quotes become \" instead of \\u0022 // $REQ_SIMPLE_014
+        var json = JsonSerializer.Serialize(obj, _jsonOptions);
+        if (json.IndexOf("\\u0022", StringComparison.Ordinal) >= 0)
+        {
+            json = json.Replace("\\u0022", "\\\"", StringComparison.Ordinal);
+        }
+        return json;
     }
 
     private static Task StartLogging(string? directory, string filenameFormat)

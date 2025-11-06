@@ -4,14 +4,31 @@
 # dependencies = []
 # ///
 
+import argparse
 import os
 import sys
 import subprocess
 import shutil
 from pathlib import Path
 
-def main():
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Build RawProx and package artifacts in ./release/"
+    )
+    parser.add_argument(
+        "--target-device",
+        choices=["win-x64", "osx-x64", "linux-x64"],
+        help="Override the detected runtime identifier (RID).",
+    )
+    return parser.parse_args(argv)
+
+def main(argv=None):
     """Build RawProx and package artifacts in ./release/"""
+
+    if argv is None:
+        argv = sys.argv[1:]
+
+    args = parse_args(argv)
 
     # Determine project paths
     project_root = Path(__file__).parent.parent.absolute()
@@ -30,14 +47,17 @@ def main():
     release_dir.mkdir(parents=True, exist_ok=True)
 
     # Determine runtime identifier
-    if sys.platform == "win32":
-        rid = "win-x64"
-    elif sys.platform == "darwin":
-        rid = "osx-x64"
+    if args.target_device:
+        rid = args.target_device
+        print(f"Building for runtime: {rid} (override from --target-device)")
     else:
-        rid = "linux-x64"
-
-    print(f"Building for runtime: {rid}")
+        if sys.platform == "win32":
+            rid = "win-x64"
+        elif sys.platform == "darwin":
+            rid = "osx-x64"
+        else:
+            rid = "linux-x64"
+        print(f"Building for runtime: {rid}")
 
     # Build command
     build_cmd = [

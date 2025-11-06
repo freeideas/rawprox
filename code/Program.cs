@@ -114,9 +114,9 @@ class Program
         else
         {
             // Add STDOUT as default destination
-            var stdoutDest = new LogDestination(null, _filenameFormat);
+            var stdoutDest = new LogDestination(null, _filenameFormat, _flushMillis);
             _logDestinations.Add(stdoutDest);
-            _ = Task.Run(() => stdoutDest.FlushLoop(_flushMillis, _cts.Token));
+            _ = Task.Run(() => stdoutDest.FlushLoop(_cts.Token));
         }
 
         // Start MCP server if requested
@@ -134,7 +134,7 @@ class Program
                     ["time"] = GetTimestamp(),
                     ["event"] = "mcp-ready",
                     ["endpoint"] = $"http://127.0.0.1:{actualPort}/mcp"
-                }, flush: true); // $REQ_MCP_003, $REQ_MCP_004
+                }); // $REQ_MCP_003, $REQ_MCP_004
                 _ = Task.Run(() => RunMcpServer(_mcpListener, _cts.Token));
             }
             catch (Exception ex)
@@ -212,37 +212,37 @@ Documentation:
             try
             {
                 var client = await listener.AcceptTcpClientAsync(ct);
-                _ = Task.Run(() => HandleConnection(client, targetHost, targetPort, localPort, ct));
+                var connId = GetNextConnId();
+                var clientEp = client.Client.RemoteEndPoint?.ToString() ?? "unknown";
+                var listenerEp = client.Client.LocalEndPoint?.ToString() ?? $"0.0.0.0:{localPort}";
+                var serverEp = $"{targetHost}:{targetPort}";
+
+                // $REQ_SIMPLE_011: Connection Open Event
+                // $REQ_SIMPLE_018: Don't block network forwarding on disk writes
+                // $REQ_SIMPLE_019: Fire-and-forget logging - network never waits for disk
+                LogEvent(new Dictionary<string, object> {
+                    ["time"] = GetTimestamp(),
+                    ["ConnID"] = connId,
+                    ["event"] = "open",
+                    ["from"] = clientEp,
+                    ["to"] = serverEp,
+                    ["listener"] = listenerEp,
+                    ["listen_port"] = localPort
+                });
+
+                _ = Task.Run(() => HandleConnection(client, targetHost, targetPort, localPort, connId, clientEp, listenerEp, serverEp, ct));
             }
             catch when (ct.IsCancellationRequested) { break; }
             catch { }
         }
     }
 
-    private static async Task HandleConnection(TcpClient client, string targetHost, int targetPort, int localPort, CancellationToken ct)
+    private static async Task HandleConnection(TcpClient client, string targetHost, int targetPort, int localPort, string connId, string clientEp, string listenerEp, string serverEp, CancellationToken ct)
     {
-        var connId = GetNextConnId();
         TcpClient? server = null;
-
-        var clientEp = client.Client.RemoteEndPoint?.ToString() ?? "unknown";
-        var listenerEp = client.Client.LocalEndPoint?.ToString() ?? $"0.0.0.0:{localPort}";
-        var serverEp = $"{targetHost}:{targetPort}";
 
         try
         {
-            // $REQ_SIMPLE_011: Connection Open Event
-            // $REQ_SIMPLE_018: Don't block network forwarding on disk writes
-            // $REQ_SIMPLE_019: Fire-and-forget logging - network never waits for disk
-            LogEvent(new Dictionary<string, object> {
-                ["time"] = GetTimestamp(),
-                ["ConnID"] = connId,
-                ["event"] = "open",
-                ["from"] = clientEp,
-                ["to"] = serverEp,
-                ["listener"] = listenerEp,
-                ["listen_port"] = localPort
-            });
-
             // $REQ_SIMPLE_005: Establish outbound TCP connection before forwarding
             server = await ConnectToTarget(targetHost, targetPort, ct);
 
@@ -358,9 +358,11 @@ Documentation:
             var b = bytes[i];
             // Percent sign must be encoded as %25
             if (b == 0x25) sb.Append("%25");
+            // Preserve control chars that JSON encodes with standard escapes
+            else if (b == 0x09 || b == 0x0A || b == 0x0D) sb.Append((char)b); // $REQ_SIMPLE_014
             // Printable ASCII (0x20-0x7E except %) as literal
             else if (b >= 0x20 && b <= 0x7E) sb.Append((char)b);
-            // All other bytes as %XX (including \t, \n, \r, etc.)
+            // All other bytes as %XX
             else sb.Append($"%{b:X2}");
         }
         return sb.ToString();
@@ -399,17 +401,13 @@ Documentation:
         return DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.ffffffZ", CultureInfo.InvariantCulture);
     }
 
-    private static void LogEvent(Dictionary<string, object> obj, bool flush = false)
+    private static void LogEvent(Dictionary<string, object> obj)
     {
         var json = SerializeLogObject(obj);
         foreach (var dest in _logDestinations)
         {
             // Fire-and-forget: Log() returns Task.CompletedTask immediately, no need to await
             _ = dest.Log(json);
-            if (flush)
-            {
-                _ = Task.Run(() => dest.FlushNow());
-            }
         }
     }
 
@@ -426,9 +424,9 @@ Documentation:
 
     private static Task StartLogging(string? directory, string filenameFormat)
     {
-        var dest = new LogDestination(directory, filenameFormat);
+        var dest = new LogDestination(directory, filenameFormat, _flushMillis);
         _logDestinations.Add(dest);
-        _ = Task.Run(() => dest.FlushLoop(_flushMillis, _cts.Token));
+        _ = Task.Run(() => dest.FlushLoop(_cts.Token));
 
         // $REQ_LOG_016: filename_format only in event for directory logging, not STDOUT
         var logEvent = new Dictionary<string, object> {
@@ -441,7 +439,7 @@ Documentation:
             logEvent["filename_format"] = filenameFormat;
         }
 
-        LogEvent(logEvent, flush: true);
+        LogEvent(logEvent);
         return Task.CompletedTask;
     }
 
@@ -469,7 +467,7 @@ Documentation:
                 ["time"] = GetTimestamp(),
                 ["event"] = "stop-logging",
                 ["directory"] = dest.Directory!
-            }, flush: true); // $REQ_LOG_002, $REQ_LOG_005, $REQ_LOG_006, $REQ_LOG_007
+            }); // $REQ_LOG_002, $REQ_LOG_005, $REQ_LOG_006, $REQ_LOG_007
             dest.Stop();
         }
         return Task.CompletedTask;
@@ -870,15 +868,19 @@ class LogDestination
     private readonly ConcurrentQueue<string> _buffer = new();
     private readonly string? _directory;
     private readonly string _filenameFormat;
+    private readonly int _flushIntervalMs;
+    private DateTimeOffset _lastFlushTime;
     private bool _stopped;
 
     public string? Directory => _directory;
     public bool IsStopped => _stopped;
 
-    public LogDestination(string? directory, string filenameFormat)
+    public LogDestination(string? directory, string filenameFormat, int flushIntervalMs)
     {
         _directory = directory;
         _filenameFormat = filenameFormat;
+        _flushIntervalMs = Math.Max(1, flushIntervalMs);
+        _lastFlushTime = DateTimeOffset.UtcNow;
         if (directory != null)
         {
             System.IO.Directory.CreateDirectory(directory);
@@ -897,24 +899,56 @@ class LogDestination
         _stopped = true;
     }
 
-    public async Task FlushNow()
+    public async Task FlushLoop(CancellationToken ct)
     {
-        await Flush();
-    }
-
-    public async Task FlushLoop(int intervalMs, CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested && !_stopped)
+        var interval = TimeSpan.FromMilliseconds(_flushIntervalMs);
+        using var timer = new PeriodicTimer(interval);
+        try
         {
-            await Task.Delay(intervalMs, ct).ContinueWith(_ => { });
-            await Flush();
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                if (_stopped)
+                {
+                    break;
+                }
+
+                await Flush(force: false, ct);
+            }
         }
-        await Flush(); // Final flush
+        catch (OperationCanceledException)
+        {
+            // Cancellation is expected during shutdown; ensure final flush below.
+        }
+        finally
+        {
+            await Flush(force: true, CancellationToken.None);
+        }
     }
 
-    private async Task Flush()
+    private async Task Flush(bool force, CancellationToken ct)
     {
         if (_buffer.IsEmpty) return;
+
+        if (!force)
+        {
+            var elapsed = DateTimeOffset.UtcNow - _lastFlushTime;
+            var minInterval = TimeSpan.FromMilliseconds(_flushIntervalMs);
+            if (elapsed < minInterval)
+            {
+                var remaining = minInterval - elapsed;
+                if (remaining > TimeSpan.Zero)
+                {
+                    try
+                    {
+                        await Task.Delay(remaining, ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
 
         var lines = new List<string>();
         while (_buffer.TryDequeue(out var line))
@@ -937,6 +971,8 @@ class LogDestination
             var path = Path.Combine(_directory, filename);
             await File.AppendAllTextAsync(path, text);
         }
+
+        _lastFlushTime = DateTimeOffset.UtcNow;
     }
 
     private static string FormatFilename(string format)

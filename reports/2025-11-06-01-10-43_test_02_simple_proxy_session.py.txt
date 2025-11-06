@@ -1,3 +1,0 @@
-test_02_simple_proxy_session.py FAIL
-✗ Test failed: Found Unicode escape sequence in NDJSON output (should use URL-encoding instead): {"time":"2025-11-06T01:10:43.233188Z","ConnID":"4Rt9qMDI","data":"Normal text with%25percent%09%0A%0D%00%01%1F%7F%80%FFQuote:\u0022 Backslash:\\ End","from":"localhost:19993","to":"127.0.0.1:60302","listener":"127.0.0.1:19992","listen_port":19992}
-Installed 5 packages in 9ms

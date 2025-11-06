@@ -1,6 +1,10 @@
+# so ai agents won't try to find files here
+/.git/
+
 # Generated directories (produced by the-system scripts)
 /report/
 /workQ/
+#/release/
 
 # Temporary files
 /tmp/
@@ -20,9 +24,9 @@ build/
 htmlcov/
 
 # .NET
+#*.exe
 bin/
 obj/
-*.exe
 *.dll
 *.pdb
 *.cache
@@ -51,5 +55,3 @@ Desktop.ini
 
 # Project-specific files
 CLAUDE.md
-
-# Note: ./release/ is NOT ignored -- we keep build artifacts in the repository

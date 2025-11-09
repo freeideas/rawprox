@@ -78,14 +78,14 @@ def test_startup():
     server = Server()
     server.start()
     assert server.is_running()  # $REQ_STARTUP_999
-    assert server.port == 8080  # $REQ_STARTUP_002
+    assert server.port == 43143  # $REQ_STARTUP_002
 
 # After (if only $REQ_STARTUP_999 is orphan):
 def test_startup():
     server = Server()
     server.start()
     # Removed orphan assertion for $REQ_STARTUP_999
-    assert server.port == 8080  # $REQ_STARTUP_002
+    assert server.port == 43143  # $REQ_STARTUP_002
 ```
 
 ### Step 3: Update Tests if Needed

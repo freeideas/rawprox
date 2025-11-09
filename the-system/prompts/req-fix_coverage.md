@@ -16,15 +16,34 @@ Ensure all reasonably testable behaviors from READMEs are represented in `./reqs
 
 ---
 
+## Exercise Judgment
+
+**Not everything in documentation needs to be a requirement.** Use judgment to distinguish:
+
+- **What matters** -- Observable behavior from outside the system
+- **What doesn't matter** -- Internal implementation details we don't care about
+
+**Examples of things that DON'T need requirements:**
+
+- README says "returns simple HTML" → Requirement: "Returns HTML with 200 OK" (NOT: "HTML must be simple")
+- README says "returns the same HTML each time" → Requirement: "Returns HTML" (NOT: "Must return identical content on every request")
+- README says "polls file every 500ms" → Requirement: "Detects file changes" (NOT: "Must poll every 500ms")
+- README says "uses 4KB buffer" → Requirement: "Buffers data in memory" (NOT: "Buffer must be exactly 4KB")
+
+**Ask yourself:** Would changing this detail break the user's workflow? If not, it doesn't need a requirement.
+
+---
+
 ## Your Task
 
 1. Read `./README.md` and all files in `./readme/`
 2. Read all flow files in `./reqs/`
 3. Identify reasonably testable behaviors in READMEs missing from flows
 4. **Distinguish requirements from illustrations** -- if README says "it will crash with OOM instead of blocking", the requirement is "don't block", not "crash with OOM"
-5. **Focus on significant gaps** -- ignore minor omissions; only address important missing behaviors
-6. **Fix by adding missing requirements** to appropriate flow files
-7. **Fix by splitting** requirements that combine multiple distinct behaviors
+5. **Distinguish requirements from descriptive context** -- if README says "returns the same HTML each time" to explain it's static, the requirement is just "returns HTML", not "identical every time"
+6. **Focus on significant gaps** -- ignore minor omissions; only address important missing behaviors
+7. **Fix by adding missing requirements** to appropriate flow files
+8. **Fix by splitting** requirements that combine multiple distinct behaviors
 
 **Reasonably testable behaviors:**
 - Actions users take

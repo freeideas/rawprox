@@ -34,7 +34,7 @@ os.chdir(project_root)
 
 # Import the agentic coder wrapper
 sys.path.insert(0, str(project_root / 'the-system' / 'scripts'))
-from prompt_agentic_coder import run_prompt
+from prompt_agentic_coder import get_ai_response_text
 
 def main():
     print("=" * 60)
@@ -46,7 +46,7 @@ def main():
 
     # Run the validation prompt
     prompt = "Please follow these instructions: @./the-system/prompts/CHECK_BUILD_ARTIFACTS.md"
-    result = run_prompt(prompt)
+    result = get_ai_response_text(prompt)
 
     # Extract status from last line
     output_text = result.stdout.strip()

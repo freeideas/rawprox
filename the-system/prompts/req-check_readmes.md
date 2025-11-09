@@ -25,7 +25,7 @@ Validate that documentation clearly describes what the software does with correc
 **Check:** Do READMEs contradict themselves?
 
 **Examples:**
-- README says "port defaults to 8080" in one section, "port is required" in another
+- README says "port defaults to 43143" in one section, "port is required" in another
 - README says "starts immediately" in one place, "waits for confirmation" elsewhere
 - Mutually exclusive behaviors described without clarifying when each applies
 
@@ -45,7 +45,7 @@ Validate that documentation clearly describes what the software does with correc
 - "User-friendly interface" -- completely subjective
 
 **Good examples (specific enough to implement):**
-- "Accept connections on port 8080"
+- "Accept connections on port 43143"
 - "Use TLS 1.2 or higher for HTTPS"
 - "Log each request to stdout"
 
@@ -119,7 +119,7 @@ Issue: States "handle errors appropriately" without indicating what appropriate 
 File: ./readme/API.md
 Problem: Internal contradiction
 Location: Sections "Startup" and "Error Handling"
-Issue: "Startup" says port defaults to 8080, but "Error Handling" says missing port causes error exit
+Issue: "Startup" says port defaults to 43143, but "Error Handling" says missing port causes error exit
 
 File: ./readme/PERFORMANCE.md
 Problem: Performance/load claims without observable behavior

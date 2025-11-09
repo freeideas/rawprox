@@ -26,7 +26,7 @@ A requirement is inaccurate when it misrepresents what the README says.
 
 ### 1. Inverting Behavior
 
-**README:** "Port defaults to 8080 if not provided"
+**README:** "Port defaults to 43143 if not provided"
 **Inaccurate req:** "Must display error and exit if port not provided"
 **Problem:** Opposite of what README says
 

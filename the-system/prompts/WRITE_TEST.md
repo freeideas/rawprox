@@ -12,7 +12,6 @@ Write tests for requirements that have no test coverage.
 - No undocumented edge cases
 - No error handling except where required
 - Keep tests simple -- prefer duplication over abstraction
-- Mock only what you must
 
 ---
 
@@ -91,21 +90,37 @@ For broader context about what the application does and why:
 
 These documents explain the "why" behind requirements and provide user perspective. Refer to them when you need to understand the purpose and context of what you're testing.
 
+**🔴 CRITICAL: Check for Testing Strategy Documentation**
+
+Before writing any test, check if testing strategies are documented:
+- Read `./README.md` for testing-related sections
+- Read any `./readme/*.md` files that mention testing approaches
+- If testing strategies exist, **follow them exactly**
+- Testing documentation may specify how to generate test data, what tools to use, or specific patterns to follow
+- For example, it might require using real services instead of mocks, or using specific data generation tools
+- **Failure to follow documented testing strategies will result in tests that don't match the project's approach**
+
 ---
 
 ## Instructions
 
-### Step 1: Read the Flow File
+### Step 1: Read Testing Strategy (If Present)
+
+**BEFORE doing anything else, check `./README.md` and `./readme/` for testing strategies.**
+
+These files, if they contain testing guidance, provide mandatory testing patterns that override default approaches. Follow them exactly.
+
+### Step 2: Read the Flow File
 
 You'll be given a $REQ_ID and its flow file. Read the entire flow to understand all requirements and their sequence.
 
-### Step 2: Determine Test File Path
+### Step 3: Determine Test File Path
 
 Check if test file exists:
 - If `./tests/failing/test_FLOWNAME.py` exists: update it
 - If not: create it
 
-### Step 3: Write the Test
+### Step 4: Write the Test
 
 Create one test function that:
 1. Executes flow from start to shutdown
@@ -126,7 +141,7 @@ print("Checking if process is still alive...")
 
 **Windows warning:** Always use `process.kill()` for cleanup. Never use `terminate()`, `send_signal()`, or `CTRL_C_EVENT` -- on Windows these propagate to the parent process and kill the test runner.
 
-### Step 4: Tag Each Assertion
+### Step 5: Tag Each Assertion
 
 ```python
 assert condition, "message"  # $REQ_STARTUP_001
@@ -153,7 +168,7 @@ This enables traceability from requirements to tests.
 Start the server executable.
 
 ## $REQ_STARTUP_002: Bind to Port
-Server must bind to port 8080.
+Server must bind to port 43143.
 
 ## $REQ_STARTUP_003: Health Check
 GET /health returns 200 OK.
@@ -174,12 +189,12 @@ def main():
 
         # Port binding
         sock = socket.socket()
-        result = sock.connect_ex(('localhost', 8080))
+        result = sock.connect_ex(('localhost', 43143))
         assert result == 0, "Port not bound"  # $REQ_STARTUP_002
         sock.close()
 
         # Health check
-        response = requests.get('http://localhost:8080/health')
+        response = requests.get('http://localhost:43143/health')
         assert response.status_code == 200, "Health check failed"  # $REQ_STARTUP_003
 
         print("✓ All tests passed")
@@ -236,9 +251,9 @@ For requirements about **build artifacts** (what files exist in `./release/`), u
 from pathlib import Path
 
 # Verify ./release/ contains expected executable
-exe_path = Path('./release/rawprox.exe')
-assert exe_path.exists(), "rawprox.exe missing from ./release/"  # $REQ_SIMPLE_001
-assert exe_path.is_file(), "rawprox.exe must be a file"  # $REQ_SIMPLE_001
+exe_path = Path('./release/subcomponent.exe')
+assert exe_path.exists(), "subcomponent.exe missing from ./release/"  # $REQ_SIMPLE_001
+assert exe_path.is_file(), "subcomponent.exe must be a file"  # $REQ_SIMPLE_001
 
 # Verify no debug/runtime files
 release_files = list(Path('./release/').iterdir())

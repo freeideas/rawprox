@@ -4,7 +4,7 @@
 # dependencies = []
 # ///
 
-DEFAULT_AGENT = "codex"
+DEFAULT_AGENT = "claude"
 
 """
 Wrapper for agentic coder - delegates to the configured agent CLI.
@@ -14,7 +14,7 @@ Usage:
 
 Or from Python:
     import prompt_agentic_coder
-    result = prompt_agentic_coder.run_prompt(prompt_text, report_type="my_task")
+    result = prompt_agentic_coder.get_ai_response_text(prompt_text, report_type="my_task")
 """
 
 import os
@@ -36,7 +36,6 @@ SUPPORTED_AGENTS = {"codex", "claude"}
 
 def _process_codex_output(raw_stdout):
     final_agent_message = None
-    aggregated_outputs = []
 
     for line in raw_stdout.splitlines():
         stripped = line.strip()
@@ -48,50 +47,34 @@ def _process_codex_output(raw_stdout):
                 item = event.get("item", {})
                 if item.get("type") == "agent_message":
                     final_agent_message = item.get("text", "")
-            item = event.get("item", {})
-            if item:
-                output_obj = item.get("output", {})
-                if output_obj:
-                    aggregated_outputs.append({
-                        "id": item.get("id"),
-                        "type": item.get("type"),
-                        "output": output_obj.get("text", "")
-                    })
         except json.JSONDecodeError:
             continue
 
     if final_agent_message is None:
         final_agent_message = raw_stdout.strip()
 
-    return final_agent_message, aggregated_outputs
+    return final_agent_message
 
 
 def _process_claude_output(raw_stdout):
     stripped = raw_stdout.strip()
-    aggregated_outputs = []
 
     if not stripped:
-        return "", aggregated_outputs
+        return ""
 
     try:
         payload = json.loads(stripped)
     except json.JSONDecodeError:
-        return stripped, aggregated_outputs
+        return stripped
 
     result_text = payload.get("result")
     if result_text is None:
         result_text = stripped
 
-    aggregated_outputs.append({
-        "id": payload.get("session_id"),
-        "type": payload.get("type", "claude_result"),
-        "output": json.dumps(payload, indent=2, ensure_ascii=False)
-    })
-
-    return result_text, aggregated_outputs
+    return result_text
 
 
-def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AGENT):
+def get_ai_response_text(prompt_text: str, report_type: str = "prompt", timeout: int = 3600, agent: str = DEFAULT_AGENT) -> str:
     """
     Run a prompt by delegating to the configured agent CLI using JSON output.
 
@@ -102,7 +85,7 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AG
         agent: Name of the agent CLI to use ("claude" or "codex")
 
     Returns:
-        String containing the AI response
+        str: The AI's response text (NOT a subprocess.CompletedProcess object)
     """
     if agent not in SUPPORTED_AGENTS:
         raise ValueError(f"Unsupported agent '{agent}'. Supported agents: {', '.join(sorted(SUPPORTED_AGENTS))}")
@@ -134,17 +117,19 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AG
     else:  # agent == "claude"
         agent_cmd = [
             "claude",
-            "--print",
-            "--output-format=json"
+            "-",
+            "--output-format=json",
+            "--dangerously-skip-permissions"
         ]
         model_override = os.environ.get("PROMPT_AGENTIC_MODEL")
-        agent_cmd.extend(["--model", model_override if model_override else "opus"])
+        agent_cmd.extend(["--model", model_override if model_override else "sonnet"])
 
     print(f"DEBUG [prompt_agentic_coder]: Launching {agent} CLI (timeout: {timeout}s)...", file=sys.stderr, flush=True)
 
     # Launch agent CLI and capture output
     try:
-        result = subprocess.run(
+        # Internal subprocess result - NOT what this function returns!
+        _subprocess_result = subprocess.run(
             agent_cmd,
             input=prompt_text,
             capture_output=True,
@@ -154,23 +139,22 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AG
             timeout=timeout
         )
 
-        raw_stdout = result.stdout or ""
-        raw_stderr = result.stderr or ""
+        raw_stdout = _subprocess_result.stdout or ""
+        raw_stderr = _subprocess_result.stderr or ""
 
         final_agent_message = None
-        aggregated_outputs = []
 
         if agent == "codex":
-            final_agent_message, aggregated_outputs = _process_codex_output(raw_stdout)
+            final_agent_message = _process_codex_output(raw_stdout)
         else:
-            final_agent_message, aggregated_outputs = _process_claude_output(raw_stdout)
+            final_agent_message = _process_claude_output(raw_stdout)
 
         ai_response = final_agent_message or ""
 
         if raw_stderr:
             ai_response += f"\n\n--- stderr ---\n{raw_stderr}"
 
-        print(f"DEBUG [prompt_agentic_coder]: {agent} CLI completed (exit code: {result.returncode})", file=sys.stderr, flush=True)
+        print(f"DEBUG [prompt_agentic_coder]: {agent} CLI completed (exit code: {_subprocess_result.returncode})", file=sys.stderr, flush=True)
         print(f"DEBUG [prompt_agentic_coder]: Final message length: {len(ai_response)} chars", file=sys.stderr, flush=True)
 
         # Write structured report to ./reports/
@@ -182,16 +166,6 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AG
 
         # Format report with prompt and response
         report_title = report_type.replace('_', ' ').title()
-        aggregated_sections = []
-        for entry in aggregated_outputs:
-            label_parts = []
-            if entry.get("id"):
-                label_parts.append(entry["id"])
-            if entry.get("type"):
-                label_parts.append(entry["type"])
-            label = " ".join(label_parts) if label_parts else "Aggregated Output"
-            aggregated_sections.append(f"### {label}\n\n```\n{entry['output']}\n```")
-        aggregated_output_block = "\n\n".join(aggregated_sections) if aggregated_sections else "No aggregated output captured."
         structured_report = f"""# {report_title}
 **Timestamp:** {report_timestamp}
 
@@ -206,21 +180,15 @@ def run_prompt(prompt_text, report_type="prompt", timeout=3600, agent=DEFAULT_AG
 ## Response
 
 {ai_response}
-
----
-
-## {agent.title()} Aggregated Output
-
-{aggregated_output_block}
 """
 
         final_report_path.write_text(structured_report, encoding='utf-8')
         print(f"DEBUG [prompt_agentic_coder]: Wrote report to {final_report_path}", file=sys.stderr, flush=True)
 
-        if result.returncode != 0:
-            raise RuntimeError(f"{agent} CLI exited with {result.returncode}")
+        if _subprocess_result.returncode != 0:
+            raise RuntimeError(f"{agent} CLI exited with {_subprocess_result.returncode}")
 
-        return ai_response
+        return ai_response  # Returns str, not subprocess result!
 
     except subprocess.TimeoutExpired:
         error_msg = f"Timeout: {agent} CLI did not complete within {timeout}s"
@@ -235,7 +203,7 @@ def test_worker(task_name, prompt, expected_answer, results, agent):
     """Worker thread for test mode"""
     try:
         print(f"[TEST] {task_name}: Submitting prompt...", file=sys.stderr, flush=True)
-        result = run_prompt(prompt, report_type=f"test_{task_name}", agent=agent)
+        result = get_ai_response_text(prompt, report_type=f"test_{task_name}", agent=agent)
 
         # Check if expected answer is in the result
         if str(expected_answer) in result:
@@ -317,7 +285,7 @@ def main():
 
     # Execute via selected agent CLI
     try:
-        result = run_prompt(prompt, report_type="stdin_prompt", agent=args.agent)
+        result = get_ai_response_text(prompt, report_type="stdin_prompt", agent=args.agent)
         # Write output to stdout
         sys.stdout.write(result)
         sys.exit(0)

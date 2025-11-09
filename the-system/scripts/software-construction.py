@@ -23,7 +23,7 @@ os.chdir(project_root)
 
 # Import the agentic coder wrapper
 sys.path.insert(0, str(script_dir))
-from prompt_agentic_coder import run_prompt
+from prompt_agentic_coder import get_ai_response_text
 
 def run_fix_unique_ids():
     """Run fix-unique-req-ids.py to auto-fix duplicate IDs."""
@@ -92,8 +92,8 @@ def handle_missing_build_script():
     # Build prompt
     prompt = "Please follow these instructions: @./the-system/prompts/BUILD_SCRIPT.md"
 
-    print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt, report_type="missing_build_script")
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
+    result = get_ai_response_text(prompt, report_type="missing_build_script")
     print(f"← Command finished\n")
 
     # Check if AI indicated insufficient README info
@@ -151,8 +151,8 @@ def handle_orphan_req_ids(orphans):
     # Build prompt
     prompt = f"Please follow these instructions: @./the-system/prompts/REMOVE_ORPHAN_REQS.md\n\nOrphan $REQ_IDs to remove:\n{orphan_text}"
 
-    print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt, report_type="orphan_req_id")
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
+    result = get_ai_response_text(prompt, report_type="orphan_req_id")
     print(f"← Command finished\n")
 
     print(f"✓ Removed {len(orphans)} orphan $REQ_IDs\n")
@@ -192,12 +192,27 @@ def handle_untested_req(untested):
     prompt += f"  Source: {source_attribution}\n"
     prompt += f"  Requirement text: {req_text}\n"
 
-    print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt, report_type="untested_req")
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
+    result = get_ai_response_text(prompt, report_type="untested_req")
     print(f"← Command finished\n")
 
     print(f"✓ Created test for {req_id}\n")
     return True  # work was done
+
+def handle_test_strategy_compliance():
+    """Ensure all tests comply with documented testing strategies."""
+    print("\n" + "=" * 60)
+    print("WORK ITEM: test_strategy_compliance")
+    print("=" * 60 + "\n")
+
+    # Build prompt
+    prompt = "Please follow these instructions: @./the-system/prompts/TEST-STRATEGY-COMPLIANCE.md"
+
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
+    result = get_ai_response_text(prompt, report_type="test_strategy_compliance")
+    print(f"← Command finished\n")
+
+    print("✓ Test strategy compliance check complete\n")
 
 def handle_test_ordering():
     """Ensure tests are ordered from general/foundational to specific/advanced."""
@@ -208,8 +223,8 @@ def handle_test_ordering():
     # Build prompt
     prompt = "Please follow these instructions: @./the-system/prompts/ORDER_TESTS.md"
 
-    print(f"→ Running: prompt_agentic_coder.run_prompt()")
-    result = run_prompt(prompt, report_type="order_tests")
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
+    result = get_ai_response_text(prompt, report_type="order_tests")
     print(f"← Command finished\n")
 
     print("✓ Tests analyzed and ordered\n")
@@ -310,8 +325,8 @@ def handle_single_test_until_passes(test_file):
         prompt += f"Attempt: {attempt}/{max_attempts}\n\n"
         prompt += f"Test output:\n```\n{test_output}\n```\n"
 
-        print(f"→ Running: prompt_agentic_coder.run_prompt()")
-        result = run_prompt(prompt, report_type="failing_test")
+        print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
+        result = get_ai_response_text(prompt, report_type="failing_test")
         print(f"← Command finished\n")
 
         # Rebuild requirements index after AI made changes
@@ -381,7 +396,11 @@ def main():
         run_build_req_index()  # Rebuild after writing tests
         tests_were_written = True
 
-    # Step 6: Order tests by dependency (only if new tests were written)
+    # Step 6: Ensure test strategy compliance
+    handle_test_strategy_compliance()
+    run_build_req_index()  # Rebuild after any test modifications
+
+    # Step 7: Order tests by dependency (only if new tests were written)
     if tests_were_written:
         handle_test_ordering()
 

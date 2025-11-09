@@ -24,6 +24,14 @@ For broader context about what the application does and why:
 
 These documents explain the "why" behind requirements and provide architectural context. Refer to them when you need to understand the purpose and expected behavior of features you're implementing.
 
+**🔴 CRITICAL: Check for Testing Strategy Documentation**
+
+Check `./README.md` and `./readme/` for testing strategies:
+- **Read carefully to understand the project's testing approach**
+- Testing documentation may specify how tests should generate data, what tools to use, or specific patterns
+- When fixing tests, ensure they follow any documented testing strategies
+- If a test was written incorrectly (not following documented strategies), fix the test to align with the documented approach
+
 ---
 
 ## Instructions

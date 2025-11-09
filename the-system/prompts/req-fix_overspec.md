@@ -18,16 +18,34 @@ Ensure requirements in `./reqs/` match the specificity level of README documenta
 
 ## What Is Over-Specification?
 
-Requirements include details not specified in source READMEs.
+Requirements include details not specified in source READMEs, or turn descriptive context into rigid requirements.
 
 **Over-specified (WRONG):**
 - README: "Show error if port missing"
 - REQ: "Print `ERROR: PORT REQUIRED` to STDERR and exit with code -3"
 - **Problem:** Exact message text, stream, and exit code not in README
 
+**Over-specified (WRONG):**
+- README: "Returns the same HTML each time"
+- REQ: "Must return byte-for-byte identical HTML content on every request"
+- **Problem:** README was just explaining it's static; exact content doesn't matter
+
+**Over-specified (WRONG):**
+- README: "Polls file every 500ms to detect changes"
+- REQ: "Must check file modification time every 500ms with no more than 10ms variance"
+- **Problem:** Polling interval is implementation detail; what matters is detecting changes
+
 **Correctly specified (RIGHT):**
 - README: "Show error if port missing"
 - REQ: "Show error message if port number is missing and exit"
+
+**Correctly specified (RIGHT):**
+- README: "Returns the same HTML each time"
+- REQ: "Returns HTML with site information"
+
+**Correctly specified (RIGHT):**
+- README: "Polls file every 500ms to detect changes"
+- REQ: "Detects file changes and reconciles listeners"
 
 **When to include details:**
 - README explicitly states them
@@ -42,6 +60,7 @@ Requirements include details not specified in source READMEs.
 - Speed/throughput claims (unless specified) -- difficult to verify consistently
 - Output streams (unless specified)
 - Specific exit codes (unless specified or logically necessary)
+- **Descriptive context** (e.g., "simple HTML", "same each time", "500ms polling") -- these explain HOW, not WHAT to verify
 
 ---
 

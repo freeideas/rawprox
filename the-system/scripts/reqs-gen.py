@@ -5,10 +5,14 @@
 # ///
 
 import sys
-# Fix Windows console encoding for Unicode characters
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
+import io
+
+# Ensure UTF-8 encoding on all platforms
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+print("→ reqs-gen.py: Script starting...")
 
 import os
 import subprocess
@@ -25,7 +29,7 @@ os.chdir(project_root)
 
 # Import the agentic coder wrapper (already in same Python environment)
 sys.path.insert(0, str(script_dir))
-from prompt_agentic_coder import run_prompt
+from prompt_agentic_coder import get_ai_response_text
 
 def find_most_recent_report():
     """Find the most recent report file in ./reports/ directory."""
@@ -75,11 +79,11 @@ def run_check_readmes():
 
     prompt = "Please follow these instructions: @the-system/prompts/req-check_readmes.md"
 
-    print(f"→ Running: prompt_agentic_coder.run_prompt()")
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
     print(f"   (Prompt: @the-system/prompts/req-check_readmes.md)")
 
     try:
-        response = run_prompt(prompt, report_type="req-check_readmes")
+        response = get_ai_response_text(prompt, report_type="req-check_readmes")
         print(f"← Command finished successfully\n")
 
         # Check if README changes are required
@@ -87,7 +91,7 @@ def run_check_readmes():
             prompt_user_to_continue()
 
     except Exception as e:
-        print(f"\nERROR: run_prompt failed: {e}")
+        print(f"\nERROR: get_ai_response_text failed: {e}")
         sys.exit(1)
 
     print("✓ README quality check passed\n")
@@ -106,7 +110,7 @@ def run_single_fix_prompt(prompt_path):
 
     try:
         prompt = f"Please follow these instructions: @{prompt_path}"
-        response = run_prompt(prompt, report_type=prompt_name)
+        response = get_ai_response_text(prompt, report_type=prompt_name)
 
         readme_changes_required = "**README_CHANGES_REQUIRED: true**" in response
 
@@ -233,13 +237,13 @@ def run_write_reqs():
     prompt = "Please follow these instructions: @the-system/prompts/WRITE_REQS.md"
 
     # Run agentic-coder via imported wrapper (no subprocess overhead)
-    print(f"→ Running: prompt_agentic_coder.run_prompt()")
+    print(f"→ Running: prompt_agentic_coder.get_ai_response_text()")
 
     try:
-        result = run_prompt(prompt, report_type="write_reqs")
+        result = get_ai_response_text(prompt, report_type="write_reqs")
         print(f"← Command finished successfully\n")
     except Exception as e:
-        print(f"\nERROR: run_prompt failed: {e}")
+        print(f"\nERROR: get_ai_response_text failed: {e}")
         sys.exit(1)
 
     print("✓ Phase 1 complete\n")

@@ -22,6 +22,8 @@ Create testable requirement flows in `./reqs/` based on use-case documentation i
 
 A flow is a **sequence of steps from application start to shutdown** that can be tested end-to-end.
 
+**If README documentation presents specific named flows or scenarios, each one MUST be represented in its own requirements document.**
+
 **Example:** `./readme/LIFECYCLE.md` generates:
 - `./reqs/install.md` -- Install to ready state
 - `./reqs/startup-to-shutdown.md` -- Start server, use it, stop it
@@ -67,6 +69,13 @@ Server must exit gracefully when receiving SIGTERM.
 ---
 
 ## What to Include
+
+**Not everything in documentation needs to be a requirement.** READMEs include descriptive context to help readers understand. Extract the actual requirement, not the description.
+
+**Examples:**
+- README: "Returns simple HTML" → Requirement: "Returns HTML with 200 OK" (not "HTML must be simple")
+- README: "Returns the same HTML each time" → Requirement: "Returns HTML" (not "Must return identical content every time")
+- README: "Polls file every 500ms" → Requirement: "Detects file changes" (not "Must poll every 500ms")
 
 **DO write requirements for delivered software:**
 - Runtime behavior of executable with correct inputs (happy paths)

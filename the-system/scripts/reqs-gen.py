@@ -248,6 +248,26 @@ def run_write_reqs():
 
     print("✓ Phase 1 complete\n")
 
+def run_cleanup():
+    """Run cleanup.py to remove reports and tmp directories."""
+    print("\n" + "=" * 60)
+    print("CLEANUP: REMOVING OLD REPORTS AND TMP")
+    print("=" * 60 + "\n")
+
+    cmd = ['uv', 'run', '--script', './the-system/scripts/cleanup.py']
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=60)
+
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
+
+    if result.returncode != 0:
+        print("\n" + "=" * 60)
+        print("EXIT: cleanup.py FAILED")
+        print("=" * 60)
+        print(f"\nERROR: cleanup.py failed with exit code {result.returncode}\n")
+        sys.exit(1)
+
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Generate requirements from README documentation')
@@ -258,6 +278,9 @@ def main():
     print("\n" + "=" * 60)
     print("REQUIREMENTS GENERATION")
     print("=" * 60)
+
+    # Clean up old reports and tmp before starting
+    run_cleanup()
 
     # Create necessary directories
     os.makedirs('./reqs', exist_ok=True)

@@ -26,6 +26,8 @@ Verify that the `./release/` directory contains exactly the files specified in t
    - Whether they match
    - If mismatch: what's missing or what shouldn't be there
 
+4. **Fix build.py**
+   - If ./release/ does not match what should be in ./release/, then modify ./tests/build.py to ensure this does not happen again.
 ---
 
 ## Success Criteria

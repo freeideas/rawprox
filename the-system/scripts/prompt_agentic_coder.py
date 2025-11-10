@@ -115,8 +115,10 @@ def get_ai_response_text(prompt_text: str, report_type: str = "prompt", timeout:
         if model_override:
             agent_cmd.extend(["--model", model_override])
     else:  # agent == "claude"
+        # Use clco.bat on Windows, claude on Linux
+        claude_cmd = "clco.bat" if sys.platform == "win32" else "claude"
         agent_cmd = [
-            "claude",
+            claude_cmd,
             "-",
             "--output-format=json",
             "--dangerously-skip-permissions"

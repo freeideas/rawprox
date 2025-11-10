@@ -20,7 +20,13 @@ This script:
 import os
 import sys
 import subprocess
+import shutil
 from pathlib import Path
+
+# Fix Windows console encoding for Unicode characters
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 
 def find_prjx_root(start_path: Path) -> Path:
@@ -83,37 +89,41 @@ def find_all_the_system_dirs(prjx_root: Path) -> list[Path]:
 
 def sync_directory(source: Path, target: Path) -> bool:
     """
-    Sync source directory to target using rsync with --delete flag.
+    Sync source directory to target with --delete behavior (cross-platform).
 
     Args:
-        source: Source directory (with trailing slash for rsync semantics)
+        source: Source directory
         target: Target directory
 
     Returns:
         True if successful, False otherwise
     """
     try:
-        # Use rsync with --delete to match exactly
-        result = subprocess.run(
-            ["rsync", "-av", "--delete", f"{source}/", f"{target}/"],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        # First, copy/update all files from source to target
+        shutil.copytree(source, target, dirs_exist_ok=True)
 
-        if result.returncode == 0:
-            return True
-        else:
-            print(f"ERROR syncing {target}:", file=sys.stderr)
-            print(result.stderr, file=sys.stderr)
-            return False
+        # Then, remove files/dirs in target that don't exist in source (--delete behavior)
+        for root, dirs, files in os.walk(target, topdown=False):
+            root_path = Path(root)
+            rel_path = root_path.relative_to(target)
+            source_root = source / rel_path
 
-    except FileNotFoundError:
-        print("ERROR: rsync command not found. Please install rsync.", file=sys.stderr)
-        return False
-    except subprocess.TimeoutExpired:
-        print(f"ERROR: rsync timed out syncing {target}", file=sys.stderr)
-        return False
+            # Remove files that don't exist in source
+            for file in files:
+                target_file = root_path / file
+                source_file = source_root / file
+                if not source_file.exists():
+                    target_file.unlink()
+
+            # Remove directories that don't exist in source
+            for dir_name in dirs:
+                target_dir = root_path / dir_name
+                source_dir = source_root / dir_name
+                if not source_dir.exists():
+                    shutil.rmtree(target_dir)
+
+        return True
+
     except Exception as e:
         print(f"ERROR syncing {target}: {e}", file=sys.stderr)
         return False

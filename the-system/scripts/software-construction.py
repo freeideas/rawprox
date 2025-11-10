@@ -119,15 +119,12 @@ def handle_missing_build_script():
 
     print("✓ Created ./tests/build.py\n")
 
-    # Copy build artifacts validation test to failing tests
-    artifacts_test_src = './the-system/scripts/_test_build_artifacts.py'
-    artifacts_test_dst = './tests/failing/_test_build_artifacts.py'
-
-    if os.path.exists(artifacts_test_src):
-        import shutil
-        shutil.copy2(artifacts_test_src, artifacts_test_dst)
-        print("✓ Copied _test_build_artifacts.py to ./tests/failing/")
-        print("  (This test validates that build.py produces the correct artifacts)\n")
+    # Generate build artifacts validation test
+    print("→ Generating build artifacts validation test...")
+    artifacts_prompt = "Please follow these instructions: @./the-system/prompts/WRITE_BUILD_ARTIFACTS_TEST.md"
+    artifacts_result = get_ai_response_text(artifacts_prompt, report_type="build_artifacts_test")
+    print("✓ Generated test_00_build_artifacts.py")
+    print("  (This test validates that build.py produces the correct artifacts)\n")
 
     return True  # work was done
 
@@ -343,10 +340,33 @@ def handle_single_test_until_passes(test_file):
     print("Please review the most recent reports in ./reports/\n")
     sys.exit(1)
 
+def run_cleanup():
+    """Run cleanup.py to remove reports and tmp directories."""
+    print("\n" + "=" * 60)
+    print("CLEANUP: REMOVING OLD REPORTS AND TMP")
+    print("=" * 60 + "\n")
+
+    cmd = ['uv', 'run', '--script', './the-system/scripts/cleanup.py']
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=60)
+
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
+
+    if result.returncode != 0:
+        print("\n" + "=" * 60)
+        print("EXIT: cleanup.py FAILED")
+        print("=" * 60)
+        print(f"\nERROR: cleanup.py failed with exit code {result.returncode}\n")
+        sys.exit(1)
+
 def main():
     print("\n" + "=" * 60)
     print("SOFTWARE CONSTRUCTION")
     print("=" * 60)
+
+    # Clean up old reports and tmp before starting
+    run_cleanup()
 
     # Create necessary directories
     os.makedirs('./tests/failing', exist_ok=True)
@@ -397,8 +417,13 @@ def main():
         tests_were_written = True
 
     # Step 6: Ensure test strategy compliance
-    handle_test_strategy_compliance()
-    run_build_req_index()  # Rebuild after any test modifications
+    # Only run if there are tests in failing/ OR if failing/ is empty but passing/ is also empty
+    failing_test_count = len([f for f in os.listdir('./tests/failing') if (f.startswith('test_') or f.startswith('_test_')) and f.endswith('.py')]) if os.path.exists('./tests/failing') else 0
+    passing_test_count = len([f for f in os.listdir('./tests/passing') if (f.startswith('test_') or f.startswith('_test_')) and f.endswith('.py')]) if os.path.exists('./tests/passing') else 0
+
+    if failing_test_count > 0 or passing_test_count == 0:
+        handle_test_strategy_compliance()
+        run_build_req_index()  # Rebuild after any test modifications
 
     # Step 7: Order tests by dependency (only if new tests were written)
     if tests_were_written:
@@ -408,6 +433,39 @@ def main():
     print("✓ SETUP COMPLETE")
     print("=" * 60)
     print("\nAll tests written and ordered. Beginning test processing...\n")
+
+    # ========================================================================
+    # PRE-TEST PHASE - Move passing tests back to failing for validation
+    # ========================================================================
+
+    # Check if failing directory is empty
+    failing_tests = []
+    if os.path.exists('./tests/failing'):
+        for filename in os.listdir('./tests/failing'):
+            if (filename.startswith('test_') or filename.startswith('_test_')) and filename.endswith('.py'):
+                failing_tests.append(filename)
+
+    if not failing_tests:
+        # No tests in failing - move all from passing to failing for validation
+        passing_tests = []
+        if os.path.exists('./tests/passing'):
+            for filename in os.listdir('./tests/passing'):
+                if (filename.startswith('test_') or filename.startswith('_test_')) and filename.endswith('.py'):
+                    passing_tests.append(filename)
+
+        if passing_tests:
+            print("\n" + "=" * 60)
+            print("MOVING TESTS FOR VALIDATION")
+            print("=" * 60)
+            print(f"\nNo tests in ./tests/failing/ - moving {len(passing_tests)} test(s) from ./tests/passing/ for validation:\n")
+
+            for filename in passing_tests:
+                src = os.path.join('./tests/passing', filename)
+                dst = os.path.join('./tests/failing', filename)
+                os.rename(src, dst)
+                print(f"  → {filename}")
+
+            print(f"\n✓ Moved {len(passing_tests)} test(s) to ./tests/failing/\n")
 
     # ========================================================================
     # MAIN TEST LOOP - Process tests until failing directory is empty
